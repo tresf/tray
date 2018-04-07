@@ -35,6 +35,11 @@ public class SystemUtilities {
     private static String uname;
     private static String linuxRelease;
 
+    /**
+     * Sun property pointing the main class and its arguments.
+     * Might not be defined on non Hotspot VM implementations.
+     */
+    public static final String SUN_JAVA_COMMAND = "sun.java.command";
 
     /**
      * @return Lowercase version of the operating system name
