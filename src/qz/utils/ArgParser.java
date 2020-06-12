@@ -27,6 +27,25 @@ import static qz.common.Constants.*;
 import static qz.utils.ArgParser.ExitStatus.*;
 
 public class ArgParser {
+    public enum ArgType {
+        /** Installer **/
+        PREINSTALL(""),
+        INSTALL("install --dest /my/install/location [--silent]"),
+        CERTGEN("certgen [--key key.pem --cert cert.pem] [--pfx cert.pfx --pass 12345] [--host \"list;of;hosts\""),
+        UNINSTALL(""),
+        SPAWN("spawn [params]"),
+        /** Packager **/
+        JLINK("jlink [fixme]");
+        public String usage;
+        ArgType(String usage) {
+            this.usage = usage;
+        }
+        @Override
+        public String toString() {
+            return name().toLowerCase(Locale.ENGLISH);
+        }
+    }
+
     public enum ExitStatus {
         SUCCESS(0),
         GENERAL_ERROR(1),
@@ -93,7 +112,7 @@ public class ArgParser {
         return null;
     }
 
-    public ExitStatus processInstallerArgs(Installer.InstallType type, List<String> args) {
+    public ExitStatus processInstallerArgs(ArgParser.ArgType type, List<String> args) {
         try {
             switch(type) {
                 case PREINSTALL:
@@ -150,6 +169,8 @@ public class ArgParser {
                     args.remove(0); // first argument is "spawn", remove it
                     Installer.getInstance().spawn(args);
                     return SUCCESS;
+                case JLINK:
+                    // FIXME
                 default:
                     throw new UnsupportedOperationException("Installation type " + type + " is not yet supported");
             }
@@ -168,9 +189,9 @@ public class ArgParser {
      */
     public boolean intercept() {
         // Fist, handle installation commands (e.g. install, uninstall, certgen, etc)
-        for(Installer.InstallType installType : Installer.InstallType.values()) {
-            if (args.contains(installType.toString())) {
-                exitStatus = processInstallerArgs(installType, args);
+        for(ArgParser.ArgType argType : ArgParser.ArgType.values()) {
+            if (args.contains(argType.toString())) {
+                exitStatus = processInstallerArgs(argType, args);
                 return true;
             }
         }

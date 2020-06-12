@@ -84,9 +84,9 @@
         <!-- Apple: Extract, sign, repackage all nested native libs for notarization -->
         <antcall target="apple-installer.codesign-jars"/>
 
-        <echo level="info">Building Jar for Socket use</echo>
+        <echo level="info">Building jar</echo>
         <mkdir dir="${sign.lib.dir}"/>
-        <jar compress="${jar.compress}" index="${jar.index}" destfile="${dist.dir}/${project.filename}.jar" duplicate="preserve">
+        <jar compress="false" index="${jar.index}" destfile="${out.dir}/${project.filename}.jar.tmp" duplicate="preserve">
             <fileset dir="${build.dir}/${project.filename}"/>
             <zipgroupfileset dir="${sign.lib.dir}" includes="**/*.jar" erroronmissingdir="false"/>
             <zipgroupfileset dir="lib">
@@ -94,12 +94,18 @@
                 <exclude name="**/jfxrt.jar"/>
                 <exclude name="**/jssc-*.jar" if="codesign.mac"/>
             </zipgroupfileset>
+        </jar>
+        <!-- Strip jlink-incompat files -->
+        <echo level="info">Stripping jlink-incompatible files</echo>
+        <jar compress="${jar.compress}" index="${jar.index}" destfile="${dist.dir}/${project.filename}.jar" duplicate="preserve">
+            <zipfileset src="${out.dir}/${project.filename}.jar.tmp" excludes="*.class,LICENSE,jetty-dir.css"/>
             <manifest>
                 <attribute name="Application-Name" value="${project.name}"/>
                 <attribute name="Main-Class" value="qz.ws.PrintSocketServer"/>
                 <attribute name="Permissions" value="all-permissions"/>
             </manifest>
         </jar>
+        <delete file="${out.dir}/${project.filename}.jar.tmp"/>
 
         <antcall target="sign-jar">
             <param name="sign.jar.file" value="${dist.dir}/${project.filename}.jar"/>
