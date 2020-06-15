@@ -1,12 +1,13 @@
-package qz.jlink;
+package qz.build;
 
-import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.*;
 import qz.common.Constants;
 import qz.utils.ShellUtilities;
 import qz.utils.SystemUtilities;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.LinkedHashSet;
@@ -25,6 +26,7 @@ public class JLink {
     private String jarPath;
     private String jdepsPath;
     private String jlinkPath;
+    private String jmodsPath;
     private String outPath;
     private LinkedHashSet<String> depList;
 
@@ -43,7 +45,7 @@ public class JLink {
         new JLink(args.length > 0 ? args[0] : null);
     }
 
-    private JLink downloadPlatform(String platform) {
+    private JLink downloadPlatform(String platform) throws IOException {
         if(platform == null) {
             if(SystemUtilities.isMac()) {
                 platform = "mac";
@@ -55,15 +57,29 @@ public class JLink {
             log.info("No platform provided, assuming '{}'", platform);
         }
 
-        // 1. Check to see if the platform has already been downloaded
-        // 2. Download if not already
-        // 3. Regardless, keep reference to downloaded "jmod" folder, see FIXME below
-
         // Assume consistent formatting
         String url = String.format(DOWNLOAD_URL, JAVA_MAJOR, JAVA_VERSION,
                                    JAVA_MAJOR, JAVA_ARCH, platform, JAVA_GC_ENGINE,
                                    JAVA_VERSION_FILE, JAVA_EXTENSION);
-        System.err.println(url);
+
+        // Saves to out e.g. "out/jlink/jdk-platform-11_0_7"
+        String extractedJdk = new Fetcher(String.format("jlink/jdk-%s-%s", platform, JAVA_VERSION_FILE), url)
+                .fetch()
+                .uncompress();
+
+        // Get first subfolder, e.g. jdk-11.0.7+10
+        for(File subfolder : new File(extractedJdk).listFiles(pathname -> pathname.isDirectory())) {
+            extractedJdk = subfolder.getPath();
+            if(platform.equals("mac")) {
+                extractedJdk += "/Contents/Home";
+            }
+            log.info("Selecting JDK home: {}", extractedJdk);
+            break;
+        }
+
+        jmodsPath = Paths.get(extractedJdk, "jmods").toString();
+        log.info("Selecting jmods: {}", jmodsPath);
+
         return this;
     }
 
@@ -71,14 +87,14 @@ public class JLink {
         jarPath = SystemUtilities.getJarPath();
         if(!jarPath.endsWith(".jar")) {
             // Assume running from IDE
-            jarPath = Paths.get(SystemUtilities.getJarPath(), "..", "dist", Constants.PROPS_FILE + ".jar").toFile().getCanonicalPath();
+            jarPath = Paths.get(jarPath, "..", "dist", Constants.PROPS_FILE + ".jar").toFile().getCanonicalPath();
         }
         log.info("Assuming jar path: {}", jarPath);
         return this;
     }
 
-    private JLink calculateOutPath() {
-        outPath = Paths.get(jarPath, "../jre").toString();
+    private JLink calculateOutPath() throws IOException {
+        outPath = Paths.get(jarPath, "../jre").toFile().getCanonicalPath();
         log.info("Assuming output path: {}", outPath);
         return this;
     }
@@ -114,11 +130,12 @@ public class JLink {
     }
 
     private JLink deployJre() throws IOException {
+        FileUtils.deleteQuietly(new File(outPath));
         if(ShellUtilities.execute(jlinkPath,
-                                  "--module-path", JAVA_HOME + File.separator + "jmod" /* FIXME USE DOWNLOADED PLATFORM */,
+                                  "--module-path", jmodsPath,
                                   "--add-modules", String.join(",", depList),
                                   "--output", outPath)) {
-            log.info("Successfully deployed a jre to {}");
+            log.info("Successfully deployed a jre to {}", outPath);
             return this;
         }
         throw new IOException("An error occurred deploying the jre.  Please check the logs for details.");
