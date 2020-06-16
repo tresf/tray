@@ -21,6 +21,7 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
+import qz.App;
 import qz.auth.Certificate;
 import qz.auth.RequestState;
 import qz.common.ByteArrayBuilder;
@@ -324,7 +325,7 @@ public class FileUtilities {
         whiteList.add(new AbstractMap.SimpleEntry<>(USER_DIR, "|sandbox|"));
         whiteList.add(new AbstractMap.SimpleEntry<>(SHARED_DIR, "|sandbox|"));
 
-        Properties props = PrintSocketServer.getTrayProperties();
+        Properties props = App.getTrayProperties();
         if (props != null) {
             StringBuilder propString = new StringBuilder(props.getProperty("file.whitelist", ""));
             boolean escaped = false;

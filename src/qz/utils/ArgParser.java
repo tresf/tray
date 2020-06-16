@@ -61,6 +61,7 @@ public class ArgParser {
     }
 
     protected static final Logger log = LoggerFactory.getLogger(ArgParser.class);
+    private boolean headless;
     private List<String> args;
     private ExitStatus exitStatus;
 
@@ -79,6 +80,8 @@ public class ArgParser {
     public int getExitCode() {
         return exitStatus.getCode();
     }
+
+    public boolean isHeadless() { return headless; };
 
     /**
      * Gets the requested flag status
@@ -203,6 +206,13 @@ public class ArgParser {
                     exitStatus = NO_AUTOSTART;
                     return true;
                 }
+                // Don't intercept
+                exitStatus = SUCCESS;
+                return false;
+            }
+
+            // Handle headless flag
+            if(headless = hasFlag("-h", "--headless")) {
                 // Don't intercept
                 exitStatus = SUCCESS;
                 return false;
