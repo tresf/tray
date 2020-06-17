@@ -1,5 +1,6 @@
 package qz.build;
 
+import com.github.zafarkhaja.semver.Version;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.*;
 import qz.common.Constants;
@@ -7,33 +8,30 @@ import qz.utils.ShellUtilities;
 import qz.utils.SystemUtilities;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.LinkedHashSet;
 
 public class JLink {
     private static final Logger log = LoggerFactory.getLogger(JLink.class);
-    private static final String JAVA_HOME = System.getProperty("java.home");
     private static final String DOWNLOAD_URL = "https://github.com/AdoptOpenJDK/openjdk%s-binaries/releases/download/jdk-%s/OpenJDK%sU-jdk_%s_%s_%s_%s.%s";
     private static final String JAVA_VERSION = "11.0.7+10";
     private static final String JAVA_MAJOR = JAVA_VERSION.split("\\.")[0];
     private static final String JAVA_VERSION_FILE = JAVA_VERSION.replaceAll("\\+", "_");
-    private static final String JAVA_GC_ENGINE = "hotspot";
-    private static final String JAVA_ARCH = "x64";
-    private static final String JAVA_EXTENSION = SystemUtilities.isWindows() ? "zip" : "tar.gz";
+    private static final String JAVA_DEFAULT_GC_ENGINE = "hotspot";
+    private static final String JAVA_DEFAULT_ARCH = "x64";
 
     private String jarPath;
     private String jdepsPath;
+    private Version jdepsVersion;
     private String jlinkPath;
     private String jmodsPath;
     private String outPath;
     private LinkedHashSet<String> depList;
 
 
-    public JLink(String platform) throws IOException {
-        log.info("Using JAVA_HOME: {}", JAVA_HOME);
-        downloadPlatform(platform)
+    public JLink(String platform, String arch, String gcEngine) throws IOException {
+        downloadJdk(platform, arch, gcEngine)
                 .calculateJarPath()
                 .calculateOutPath()
                 .calculateToolPaths()
@@ -42,10 +40,12 @@ public class JLink {
     }
 
     public static void main(String ... args) throws IOException {
-        new JLink(args.length > 0 ? args[0] : null);
+        new JLink(args.length > 0 ? args[0] : null,
+                  args.length > 1 ? args[1] : null,
+                  args.length > 2 ? args[2] : null);
     }
 
-    private JLink downloadPlatform(String platform) throws IOException {
+    private JLink downloadJdk(String platform, String arch, String gcEngine) throws IOException {
         if(platform == null) {
             if(SystemUtilities.isMac()) {
                 platform = "mac";
@@ -54,13 +54,23 @@ public class JLink {
             } else {
                 platform = "linux";
             }
-            log.info("No platform provided, assuming '{}'", platform);
+            log.info("No platform specified, assuming '{}'", platform);
         }
+        if(arch == null) {
+            arch = JAVA_DEFAULT_ARCH;
+            log.info("No architecture specified, assuming '{}'", arch);
+        }
+        if(gcEngine == null) {
+            gcEngine = JAVA_DEFAULT_GC_ENGINE;
+            log.info("No garbage collector specified, assuming '{}'", gcEngine);
+        }
+
+        String fileExt = platform.equals("windows") ? "zip" : "tar.gz";
 
         // Assume consistent formatting
         String url = String.format(DOWNLOAD_URL, JAVA_MAJOR, JAVA_VERSION,
-                                   JAVA_MAJOR, JAVA_ARCH, platform, JAVA_GC_ENGINE,
-                                   JAVA_VERSION_FILE, JAVA_EXTENSION);
+                                   JAVA_MAJOR, arch, platform, gcEngine,
+                                   JAVA_VERSION_FILE, fileExt);
 
         // Saves to out e.g. "out/jlink/jdk-platform-11_0_7"
         String extractedJdk = new Fetcher(String.format("jlink/jdk-%s-%s", platform, JAVA_VERSION_FILE), url)
@@ -100,18 +110,28 @@ public class JLink {
     }
 
     private JLink calculateToolPaths() throws IOException {
-        jdepsPath = Paths.get(JAVA_HOME, "bin", SystemUtilities.isWindows() ? "jdeps.exe" : "jdeps").toFile().getCanonicalPath();
-        jlinkPath = Paths.get(JAVA_HOME, "bin", SystemUtilities.isWindows() ? "jlink.exe" : "jlink").toFile().getCanonicalPath();
+        String javaHome = System.getProperty("java.home");
+        log.info("Using JAVA_HOME: {}", javaHome);
+        jdepsPath = Paths.get(javaHome, "bin", SystemUtilities.isWindows() ? "jdeps.exe" : "jdeps").toFile().getCanonicalPath();
+        jlinkPath = Paths.get(javaHome, "bin", SystemUtilities.isWindows() ? "jlink.exe" : "jlink").toFile().getCanonicalPath();
         log.info("Assuming jdeps path: {}", jdepsPath);
         log.info("Assuming jlink path: {}", jlinkPath);
+        jdepsVersion = SystemUtilities.getJavaVersion(ShellUtilities.executeRaw(jdepsPath, "--version"));
         return this;
     }
 
-    private JLink calculateDepList() {
+    private JLink calculateDepList() throws IOException {
         log.info("Calling jdeps to determine runtime dependencies");
         depList = new LinkedHashSet<>();
-        String[] rawList = ShellUtilities.executeRaw(new String[] { jdepsPath, "--list-deps", jarPath}).split("\\r?\\n");
-        for(String item : rawList) {
+
+        // JDK13+ allows suppressing of missing deps
+        String raw = jdepsVersion.getMajorVersion() >= 13 ?
+                ShellUtilities.executeRaw(jdepsPath, "--list-deps", "--ignore-missing-deps", jarPath) :
+                ShellUtilities.executeRaw(jdepsPath, "--list-deps", jarPath);
+        if (raw == null || raw.trim().isEmpty() || raw.trim().startsWith("Warning") ) {
+            throw new IOException("An unexpected error occurred calling jdeps.  Please check the logs for details.\n" + raw);
+        }
+        for(String item : raw.split("\\r?\\n")) {
             item = item.trim();
             if(!item.isEmpty()) {
                 if(item.startsWith("JDK")) {
@@ -132,6 +152,10 @@ public class JLink {
     private JLink deployJre() throws IOException {
         FileUtils.deleteQuietly(new File(outPath));
         if(ShellUtilities.execute(jlinkPath,
+                                  "--strip-debug",
+                                  "--compress=2",
+                                  "--no-header-files",
+                                  "--no-man-pages",
                                   "--module-path", jmodsPath,
                                   "--add-modules", String.join(",", depList),
                                   "--output", outPath)) {

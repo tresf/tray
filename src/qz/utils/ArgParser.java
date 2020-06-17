@@ -12,6 +12,7 @@ package qz.utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import qz.build.JLink;
 import qz.common.Constants;
 import qz.common.SecurityInfo;
 import qz.exception.MissingArgException;
@@ -35,7 +36,7 @@ public class ArgParser {
         UNINSTALL(""),
         SPAWN("spawn [params]"),
         /** Packager **/
-        JLINK("jlink [fixme]");
+        JLINK("jlink [--platform mac|windows|linux] [--arch x64|aarch64] [--gc hotspot|j9]");
         public String usage;
         ArgType(String usage) {
             this.usage = usage;
@@ -173,7 +174,8 @@ public class ArgParser {
                     Installer.getInstance().spawn(args);
                     return SUCCESS;
                 case JLINK:
-                    // FIXME
+                    new JLink(valueOf("--platform", "-p"), valueOf("--arch", "-a"), valueOf("--gc", "-g"));
+                    return SUCCESS;
                 default:
                     throw new UnsupportedOperationException("Installation type " + type + " is not yet supported");
             }
