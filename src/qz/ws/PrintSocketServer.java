@@ -27,11 +27,12 @@ import qz.common.Constants;
 import qz.common.TrayManager;
 import qz.installer.certificate.*;
 
+import javax.swing.*;
+import java.lang.reflect.InvocationTargetException;
 import java.net.BindException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 
 /**
  * Created by robert on 9/9/2014.
@@ -54,8 +55,12 @@ public class PrintSocketServer {
     private static Server server;
 
 
-    public static void runServer(CertificateManager certManager, Consumer<Void> startTray) {
+    public static void runServer(CertificateManager certManager, boolean headless) throws InterruptedException, InvocationTargetException {
         PrintSocketServer.certManager = certManager;
+
+        SwingUtilities.invokeAndWait(() -> {
+            PrintSocketServer.setTrayManager(new TrayManager(headless));
+        });
 
         while(!running.get() && securePortIndex.get() < SECURE_PORTS.size() && insecurePortIndex.get() < INSECURE_PORTS.size()) {
             server = new Server(getInsecurePortInUse());
@@ -96,8 +101,8 @@ public class PrintSocketServer {
                 server.start();
 
                 running.set(true);
+                trayManager.setServer(server, insecurePortIndex.get());
                 log.info("Server started on port(s) " + getPorts(server));
-                startTray.accept(null);
                 server.join();
             }
             catch(BindException | MultiException e) {
@@ -121,7 +126,6 @@ public class PrintSocketServer {
 
     public static void setTrayManager(TrayManager manager) {
         trayManager = manager;
-        trayManager.setServer(server, insecurePortIndex.get());
         trayManager.setReloadThread(new Thread(() -> {
             try {
                 trayManager.setDangerIcon();

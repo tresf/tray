@@ -60,15 +60,8 @@ public class App {
 
         try {
             log.info("Starting {} {}", Constants.ABOUT_TITLE, Constants.VERSION);
-            // Start the UI
-            Consumer<Void> startTray = aVoid -> {
-                SwingUtilities.invokeLater(() -> {
-                    PrintSocketServer.setTrayManager(new TrayManager(parser.isHeadless()));
-                });
-            };
-
             // Start the WebSocket
-            PrintSocketServer.runServer(certManager, startTray);
+            PrintSocketServer.runServer(certManager, parser.isHeadless());
         }
         catch(Exception e) {
             log.error("Could not start tray manager", e);
