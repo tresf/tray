@@ -31,32 +31,43 @@ if [ -n "$JAVA_HOME" ]; then
     PATH="$JAVA_HOME/bin:$PATH"
 fi
 
-# Check for bundled JRE
-if [ -d ./jre ]; then
-    echo -e "$SUCCESS A bundled runtime was found.  Using..."
-    PATH="$(pwd)/jre/bin:$PATH"
-    export PATH
+# Always prefer relative jre/jdk
+if [[ "$DIR" == *"/Contents/MacOS"* ]]; then
+    PATH="$DIR/../../jre/bin:$DIR/../../jdk/bin:$PATH"
+else
+    PATH="$DIR/jre/bin:$DIR/jdk/bin:$PATH"
 fi
 
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    ICON_PATH="$DIR/Contents/Resources/apple-icon.icns"
-    MAC_PRIMARY="/usr/libexec/java_home"
-    MAC_FALLACK="/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/bin"
-    echo "Trying $MAC_PRIMARY..."
-    if "$MAC_PRIMARY" -v $JAVA_MIN+ &>/dev/null; then
-        echo -e "$SUCCESS Using \"$MAC_PRIMARY -v $JAVA_MIN+ --exec\" to launch $ABOUT_TITLE"
-        java() {
-            "$MAC_PRIMARY" -v $JAVA_MIN+ --exec java "$@"
-        }
-    elif [ -d "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/bin" ]; then
-        echo -e "$WARNING No luck using $MAC_PRIMARY"
-        echo "Trying $MAC_FALLACK..."
-        java() {
-            "$MAC_FALLACK/java" "$@"
-        }
+# Fallback on some known locations
+if ! command -v java > /dev/null ; then
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # Apple: Fallback on system-wide install
+        MAC_PRIMARY="/usr/libexec/java_home"
+        MAC_FALLACK="/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/bin"
+        echo "Trying $MAC_PRIMARY..."
+        if "$MAC_PRIMARY" -v $JAVA_MIN+ &>/dev/null; then
+            echo -e "$SUCCESS Using \"$MAC_PRIMARY -v $JAVA_MIN+ --exec\" to launch $ABOUT_TITLE"
+            java() {
+                "$MAC_PRIMARY" -v $JAVA_MIN+ --exec java "$@"
+            }
+        elif [ -d "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/bin" ]; then
+            echo -e "$WARNING No luck using $MAC_PRIMARY"
+            echo "Trying $MAC_FALLACK..."
+            java() {
+                "$MAC_FALLACK/java" "$@"
+            }
+        fi
+    else
+        # Linux/Unix: Fallback on known install location(s)
+        PATH="$PATH:/usr/java/latest/bin/"
     fi
+fi
+
+if command -v java > /dev/null ; then
+    echo -e "$SUCCESS Java was found: $(command -v java)"
 else
-    export PATH="$PATH:/usr/java/latest/bin/"
+    echo -e "$FAILURE Please install Java $JAVA_MIN or higher to continue"
+    exit 1
 fi
 
 # Make sure Java version is sufficient
@@ -84,7 +95,7 @@ if command -v java &>/dev/null; then
         else
             prefix="../../" # back two directories, e.g. postinstall
         fi
-        java $LAUNCH_OPTS -Xdock:name="$ABOUT_TITLE" -Xdock:icon="$ICON_PATH" -jar -Dapple.awt.UIElement="true" "${prefix}$PROPS_FILE.jar" -NSRequiresAquaSystemAppearance False "$@"
+        java $LAUNCH_OPTS -Xdock:name="$ABOUT_TITLE" -Xdock:icon="$DIR/Contents/Resources/apple-icon.icns" -jar -Dapple.awt.UIElement="true" "${prefix}$PROPS_FILE.jar" -NSRequiresAquaSystemAppearance False "$@"
     else
         java $LAUNCH_OPTS -jar "$PROPS_FILE.jar" "$@"
     fi

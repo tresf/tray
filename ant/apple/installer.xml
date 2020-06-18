@@ -62,6 +62,9 @@
                 <include name="**/${project.name}"/>
                 <include name="**/uninstall"/>
             </fileset>
+            <fileset dir="${build.dir}/scripts/payload/jre/bin">
+                <include name="**"/>
+            </fileset>
         </chmod>
 
         <!-- Disable signing and append "-community" if id is missing -->
