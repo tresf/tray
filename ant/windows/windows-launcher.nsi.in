@@ -39,6 +39,7 @@ Section
     ${GetParameters} $params
 
     ; Sets the $java variable
+    Push "$EXEDIR"
     Call FindJava
 
     Exec '"$javaw" ${launch.opts} -jar "${JAR}" $params'
