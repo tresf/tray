@@ -1,15 +1,28 @@
+/**
+ * @author Tres Finocchiaro
+ *
+ * Copyright (C) 2020 Tres Finocchiaro, QZ Industries, LLC
+ *
+ * LGPL 2.1 This is free software.  This software and source code are released under
+ * the "LGPL 2.1 License".  A copy of this license should be distributed with
+ * this software. http://www.gnu.org/licenses/lgpl-2.1.html
+ */
+
 package qz.build;
 
 import com.github.zafarkhaja.semver.Version;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.*;
 import qz.common.Constants;
+import qz.utils.FileUtilities;
+import qz.utils.MacUtilities;
 import qz.utils.ShellUtilities;
 import qz.utils.SystemUtilities;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 
 public class JLink {
@@ -17,6 +30,8 @@ public class JLink {
     private static final String DOWNLOAD_URL = "https://github.com/AdoptOpenJDK/openjdk%s-binaries/releases/download/jdk-%s/OpenJDK%sU-jdk_%s_%s_%s_%s.%s";
     private static final String JAVA_VERSION = "11.0.7+10";
     private static final String JAVA_MAJOR = JAVA_VERSION.split("\\.")[0];
+    private static final String JAVA_MINOR = JAVA_VERSION.split("\\.")[1];
+    private static final String JAVA_PATCH = JAVA_VERSION.split("\\.|\\+|-")[2];
     private static final String JAVA_VERSION_FILE = JAVA_VERSION.replaceAll("\\+", "_");
     private static final String JAVA_DEFAULT_GC_ENGINE = "hotspot";
     private static final String JAVA_DEFAULT_ARCH = "x64";
@@ -104,7 +119,11 @@ public class JLink {
     }
 
     private JLink calculateOutPath() throws IOException {
-        outPath = Paths.get(jarPath, "../jre").toFile().getCanonicalPath();
+        if(SystemUtilities.isMac()) {
+            outPath = Paths.get(jarPath, "../PlugIns/Java.runtime/Contents/Home").toFile().getCanonicalPath();
+        } else {
+            outPath = Paths.get(jarPath, "../jre").toFile().getCanonicalPath();
+        }
         log.info("Assuming output path: {}", outPath);
         return this;
     }
@@ -150,7 +169,23 @@ public class JLink {
     }
 
     private JLink deployJre() throws IOException {
+        if(SystemUtilities.isMac()) {
+            // Deploy Contents/MacOS/libjli.dylib
+            File macOS = new File(outPath, "../MacOS").getCanonicalFile();
+            macOS.mkdirs();
+            log.info("Deploying {}/libjli.dylib", macOS);
+            FileUtils.copyFileToDirectory(new File(jmodsPath, "../../MacOS/libjli.dylib"), macOS);
+
+            // Deploy Contents/Info.plist
+            HashMap<String, String> fieldMap = new HashMap<>();
+            fieldMap.put("%BUNDLE_ID%", MacUtilities.getBundleId() + ".jre"); // e.g. io.qz.qz-tray.jre
+            fieldMap.put("%BUNDLE_VERSION%", String.format("%s.%s.%s", JAVA_MAJOR, JAVA_MINOR, JAVA_PATCH));
+            log.info("Deploying {}/Info.plist", macOS.getParent());
+            FileUtilities.configureAssetFile("assets/mac-runtime.plist.in", new File(macOS.getParentFile(), "Info.plist"), fieldMap, JLink.class);
+        }
+
         FileUtils.deleteQuietly(new File(outPath));
+
         if(ShellUtilities.execute(jlinkPath,
                                   "--strip-debug",
                                   "--compress=2",
@@ -160,7 +195,17 @@ public class JLink {
                                   "--add-modules", String.join(",", depList),
                                   "--output", outPath)) {
             log.info("Successfully deployed a jre to {}", outPath);
+
+            // Remove all but java/javaw
+            for(File binFile : new File(outPath, "bin").listFiles()) {
+                if(!binFile.getName().startsWith("java")) {
+                    log.info("Removing {}", binFile);
+                    binFile.delete();
+                }
+            }
+
             return this;
+
         }
         throw new IOException("An error occurred deploying the jre.  Please check the logs for details.");
     }

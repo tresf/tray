@@ -33,7 +33,7 @@ fi
 
 # Always prefer relative jre/jdk
 if [[ "$DIR" == *"/Contents/MacOS"* ]]; then
-    PATH="$DIR/../../jre/bin:$DIR/../../jdk/bin:$PATH"
+    PATH="$DIR/../../PlugIns/Java.runtime/Contents/Home/bin:$PATH"
 else
     PATH="$DIR/jre/bin:$DIR/jdk/bin:$PATH"
 fi

@@ -37,7 +37,7 @@
     </target>
 
     <target name="clean" depends="init">
-        <delete dir="${out.dir}"/>
+        <!-- <delete dir="${out.dir}"/> -->
     </target>
 
     <target name="compile-socket" depends="init">

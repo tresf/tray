@@ -131,7 +131,7 @@ public abstract class Installer {
         }
 
         // Set jre/bin/java and friends executable
-        for(File file : new File(getDestination(), "jre/bin").listFiles(pathname -> !pathname.isDirectory())) {
+        for(File file : new File(getDestination(), "PlugIns/Java.runtime/Contents/Home/bin").listFiles(pathname -> !pathname.isDirectory())) {
             file.setExecutable(true, false);
         }
         return this;
