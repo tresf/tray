@@ -154,7 +154,7 @@ public class ArgParser {
 
     public ExitStatus processInstallerArgs(ArgParser.ArgType type, List<String> args) {
         try {
-            switch(argValue) {
+            switch(type) {
                 case PREINSTALL:
                     return Installer.preinstall() ? SUCCESS : SUCCESS; // don't abort on preinstall
                 case INSTALL:
@@ -213,13 +213,13 @@ public class ArgParser {
                     new JLink(valueOf("--platform", "-p"), valueOf("--arch", "-a"), valueOf("--gc", "-g"));
                     return SUCCESS;
                 default:
-                    throw new UnsupportedOperationException("Installation type " + argValue + " is not yet supported");
+                    throw new UnsupportedOperationException("Installation type " + type + " is not yet supported");
             }
         } catch(MissingArgException e) {
-            log.error("Valid usage:\n   {} {}", USAGE_COMMAND, argValue.getUsage());
+            log.error("Valid usage:\n   {} {}", USAGE_COMMAND, type.usage);
             return USAGE_ERROR;
         } catch(Exception e) {
-            log.error("Installation step {} failed", argValue, e);
+            log.error("Installation step {} failed", type, e);
             return GENERAL_ERROR;
         }
     }
@@ -250,7 +250,7 @@ public class ArgParser {
                 }
             } else {
                 // Show generic help
-                for(ArgType argType : ArgType.values()) {
+                for(ArgValue.ArgType argType : ArgValue.ArgType.values()) {
                     System.out.println(String.format("%s%s", System.lineSeparator(), argType));
                     for(ArgValue argValue : ArgValue.filter(argType)) {
                         printHelp(argValue);

@@ -298,7 +298,7 @@ public class FileUtilities {
             //default sandbox locations. More can be added through the properties file
             whiteList.add(new AbstractMap.SimpleEntry<>(USER_DIR, FIELD_SEPARATOR + "sandbox" + FIELD_SEPARATOR));
             whiteList.add(new AbstractMap.SimpleEntry<>(SHARED_DIR, FIELD_SEPARATOR + "sandbox" + FIELD_SEPARATOR));
-            whiteList.addAll(parseDelimitedPaths(getFileAllowProperty(PrintSocketServer.getTrayProperties()).toString()));
+            whiteList.addAll(parseDelimitedPaths(getFileAllowProperty(App.getTrayProperties()).toString()));
         }
 
         Path cleanPath = path.normalize().toAbsolutePath();
