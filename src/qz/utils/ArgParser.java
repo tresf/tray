@@ -129,9 +129,9 @@ public class ArgParser {
         return valueOf(argValueOption.getMatches());
     }
 
-    public ExitStatus processInstallerArgs(ArgValue type, List<String> args) {
+    public ExitStatus processInstallerArgs(ArgValue argValue, List<String> args) {
         try {
-            switch(type) {
+            switch(argValue) {
                 case PREINSTALL:
                     return Installer.preinstall() ? SUCCESS : SUCCESS; // don't abort on preinstall
                 case INSTALL:
@@ -187,31 +187,31 @@ public class ArgParser {
                     Installer.getInstance().spawn(args);
                     return SUCCESS;
                 default:
-                    throw new UnsupportedOperationException("Installation type " + type + " is not yet supported");
+                    throw new UnsupportedOperationException("Installation type " + argValue + " is not yet supported");
             }
         } catch(MissingArgException e) {
-            log.error("Valid usage:\n   {} {}", USAGE_COMMAND, type.getUsage());
+            log.error("Valid usage:\n   {} {}", USAGE_COMMAND, argValue.getUsage());
             return USAGE_ERROR;
         } catch(Exception e) {
-            log.error("Installation step {} failed", type, e);
+            log.error("Installation step {} failed", argValue, e);
             return GENERAL_ERROR;
         }
     }
 
-    public ExitStatus processBuildArgs(ArgValue type) {
+    public ExitStatus processBuildArgs(ArgValue argValue) {
         try {
-            switch(type) {
+            switch(argValue) {
                 case JLINK:
                     new JLink(valueOf("--platform", "-p"), valueOf("--arch", "-a"), valueOf("--gc", "-g"));
                     return SUCCESS;
                 default:
-                    throw new UnsupportedOperationException("Build type " + type + " is not yet supported");
+                    throw new UnsupportedOperationException("Build type " + argValue + " is not yet supported");
             }
         } catch(MissingArgException e) {
-            log.error("Valid usage:\n   {} {}", USAGE_COMMAND, type.getUsage());
+            log.error("Valid usage:\n   {} {}", USAGE_COMMAND, argValue.getUsage());
             return USAGE_ERROR;
         } catch(Exception e) {
-            log.error("Build step {} failed", type, e);
+            log.error("Build step {} failed", argValue, e);
             return GENERAL_ERROR;
         }
     }
