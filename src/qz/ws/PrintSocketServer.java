@@ -55,13 +55,10 @@ public class PrintSocketServer {
     private static final AtomicBoolean running = new AtomicBoolean(false);
 
     private static TrayManager trayManager;
-    private static CertificateManager certManager;
     private static Server server;
 
 
     public static void runServer(CertificateManager certManager, boolean headless) throws InterruptedException, InvocationTargetException {
-        PrintSocketServer.certManager = certManager;
-
         SwingUtilities.invokeAndWait(() -> {
             PrintSocketServer.setTrayManager(new TrayManager(headless));
         });
@@ -159,14 +156,6 @@ public class PrintSocketServer {
     @Deprecated
     public static void main(String ... args) {
         App.main(args);
-    }
-
-    public static AtomicInteger getSecurePortIndex() {
-        return securePortIndex;
-    }
-
-    public static AtomicInteger getInsecurePortIndex() {
-        return insecurePortIndex;
     }
 
     public static int getSecurePortInUse() {

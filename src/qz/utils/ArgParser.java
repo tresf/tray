@@ -31,25 +31,6 @@ import static qz.utils.ArgValue.*;
 import static qz.utils.ArgValue.ArgValueOption.*;
 
 public class ArgParser {
-    public enum ArgType {
-        /** Installer **/
-        PREINSTALL(""),
-        INSTALL("install --dest /my/install/location [--silent]"),
-        CERTGEN("certgen [--key key.pem --cert cert.pem] [--pfx cert.pfx --pass 12345] [--host \"list;of;hosts\""),
-        UNINSTALL(""),
-        SPAWN("spawn [params]"),
-        /** Packager **/
-        JLINK("jlink [--platform mac|windows|linux] [--arch x64|aarch64] [--gc hotspot|j9]");
-        public String usage;
-        ArgType(String usage) {
-            this.usage = usage;
-        }
-        @Override
-        public String toString() {
-            return name().toLowerCase(Locale.ENGLISH);
-        }
-    }
-
     public enum ExitStatus {
         SUCCESS(0),
         GENERAL_ERROR(1),
@@ -80,10 +61,6 @@ public class ArgParser {
     }
     public List<String> getArgs() {
         return args;
-    }
-
-    public ExitStatus getExitStatus() {
-        return exitStatus;
     }
 
     public int getExitCode() {
@@ -152,7 +129,7 @@ public class ArgParser {
         return valueOf(argValueOption.getMatches());
     }
 
-    public ExitStatus processInstallerArgs(ArgParser.ArgType type, List<String> args) {
+    public ExitStatus processInstallerArgs(ArgValue type, List<String> args) {
         try {
             switch(type) {
                 case PREINSTALL:
@@ -209,17 +186,32 @@ public class ArgParser {
                     args.remove(0); // first argument is "spawn", remove it
                     Installer.getInstance().spawn(args);
                     return SUCCESS;
-                case JLINK:
-                    new JLink(valueOf("--platform", "-p"), valueOf("--arch", "-a"), valueOf("--gc", "-g"));
-                    return SUCCESS;
                 default:
                     throw new UnsupportedOperationException("Installation type " + type + " is not yet supported");
             }
         } catch(MissingArgException e) {
-            log.error("Valid usage:\n   {} {}", USAGE_COMMAND, type.usage);
+            log.error("Valid usage:\n   {} {}", USAGE_COMMAND, type.getUsage());
             return USAGE_ERROR;
         } catch(Exception e) {
             log.error("Installation step {} failed", type, e);
+            return GENERAL_ERROR;
+        }
+    }
+
+    public ExitStatus processBuildArgs(ArgValue type) {
+        try {
+            switch(type) {
+                case JLINK:
+                    new JLink(valueOf("--platform", "-p"), valueOf("--arch", "-a"), valueOf("--gc", "-g"));
+                    return SUCCESS;
+                default:
+                    throw new UnsupportedOperationException("Build type " + type + " is not yet supported");
+            }
+        } catch(MissingArgException e) {
+            log.error("Valid usage:\n   {} {}", USAGE_COMMAND, type.getUsage());
+            return USAGE_ERROR;
+        } catch(Exception e) {
+            log.error("Build step {} failed", type, e);
             return GENERAL_ERROR;
         }
     }
@@ -272,12 +264,18 @@ public class ArgParser {
             return true;
         }
 
-        // Second, handle installation commands (e.g. install, uninstall, certgen, etc)
-        for(ArgParser.ArgType argType : ArgParser.ArgType.values()) {
-            if (args.contains(argType.toString())) {
-                exitStatus = processInstallerArgs(argType, args);
-                return true;
+        // Second, handle build or install commands
+        ArgValue found = hasFlags(true, ArgValue.filter(ArgType.INSTALLER, ArgType.BUILD));
+        if(found != null) {
+            switch(found.getType()) {
+                case BUILD:
+                    // Handle build commands (e.g. jlink)
+                    exitStatus = processBuildArgs(found);
+                case INSTALLER:
+                    // Handle install commands (e.g. install, uninstall, certgen, etc)
+                    exitStatus = processInstallerArgs(found, args);
             }
+            return true;
         }
 
         // Last, handle all other commands including normal startup
