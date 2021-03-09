@@ -61,9 +61,17 @@
                     <div class="btn-toolbar">
                         <div class="btn-group" role="group">
                             <button type="button" class="btn btn-success" onclick="startConnection();">Connect</button>
+                            <button id="toggleConnectionGroup" type="button" class="btn btn-success"
+                                    onclick="checkGroupActive('toggleConnectionGroup', 'connectionGroup'); $('#connectionHost').select();"
+                                    data-toggle="tooltip" data-placement="bottom" title="Connect to QZ Tray running on a print server"><span class="fa fa-caret-down"></span>&nbsp;</button>
                             <button type="button" class="btn btn-warning" onclick="endConnection();">Disconnect</button>
                         </div>
-                        <button type="button" class="btn btn-info" onclick="listNetworkDevices();">List Network Info</button>
+                        <button type="button" class="btn btn-info" onclick="listNetworkDevices();">Network Info</button>
+                    </div>
+                    <div class="form-group" id="connectionGroup">
+                        <hr>
+                        <label for="printerSearch">Connect to host:</label>
+                        <input type="text" id="connectionHost" value="localhost" class="form-control" />
                     </div>
                 </div>
             </div>
@@ -153,7 +161,7 @@
                                 </label>
                                 <br />
                                 <label>
-                                    <input type="radio" name="pLanguage" id="pLangESCP" value="ESCP" />
+                                    <input type="radio" name="pLanguage" id="pLangESCPOS" value="ESCPOS" />
                                     ESC/POS
                                 </label>
                                 <label>
@@ -219,8 +227,8 @@
                                             </div>
 
                                             <div class="form-group form-inline">
-                                                <label for="rawEndOfDoc">End Of Doc</label>
-                                                <input type="text" id="rawEndOfDoc" class="form-control pull-right" />
+                                                <label for="rawSpoolEnd">End Of Doc</label>
+                                                <input type="text" id="rawSpoolEnd" class="form-control pull-right" />
                                             </div>
 
                                             <div class="form-group form-inline">
@@ -413,6 +421,11 @@
                                             <div class="form-group form-inline">
                                                 <label for="pxlRotation">Rotation</label>
                                                 <input type="number" step="any" id="pxlRotation" class="form-control pull-right" />
+                                            </div>
+
+                                            <div class="form-group form-inline">
+                                                <label for="pxlSpoolSize">Per Spool</label>
+                                                <input type="number" id="pxlSpoolSize" class="form-control pull-right" />
                                             </div>
                                         </div>
                                         <div class="col-md-6">
@@ -1004,7 +1017,7 @@
                             <div class="btn-toolbar">
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-info" onclick="startPrintersListen()">All Printers</button>
-                                    <button type="button" class="btn btn-success" onclick="startPrintersListen($('#configPrinter').html())">
+                                    <button type="button" class="btn btn-success" onclick="startPrintersListen($('#configPrinter').text())">
                                         Current Printer
                                     </button>
                                     <button type="button" class="btn btn-default" onclick="getPrintersStatus()">Request current status</button>
@@ -1188,6 +1201,9 @@
                     <div class="form-group">
                         <label for="askFile">File:</label>
                         <input type="text" id="askFile" class="form-control" value="C:\tmp\example-file.txt" />
+                        <hr />
+                        <p><span class="text-danger" style="font-weight:bold;"><span class="fa fa-warning"></span> WARNING:</span> This feature has been deprecated.  Please configure a local raw <code>FILE:</code> printer, or use <code>File IO</code></a> instead.  For more
+                            information please see <a href="https://github.com/qzind/tray/issues/730">issue&nbsp;<code>#730</code>.</a></p>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1319,6 +1335,15 @@
     }
 
     function startConnection(config) {
+        host = $('#connectionHost').val().trim();
+        // Connect to a print-server instance, if specified
+        if(host != "" && host != 'localhost') {
+            if(config) {
+                config.host = host;
+            } else {
+                config = { host: host };
+            }
+        }
         if (!qz.websocket.isActive()) {
             updateState('Waiting', 'default');
 
@@ -1458,7 +1483,7 @@
                     '^XZ\n'
                 ];
                 break;
-            case 'ESCP':
+            case 'ESCPOS':
                 printData = [
                     //defaults to 'type: raw', 'format: command', and 'flavor: plain'
                     { data: '\nPRINTED WITH QZ ' + qzVersion + '.\n\n\n\n\n\n' }
@@ -1664,7 +1689,7 @@
                     { flavor: 'hex', data: 'e44530d0a5e46530d0a5e585a' }
                 ];
                 break;
-            case 'ESCP':
+            case 'ESCPOS':
                 printData = [
                     { flavor: 'hex', data: '0d0a5052494e544544205749544820515a20545241590d0a0d0a' },
                     { flavor: 'hex', data: '5553494e472068657820434f4d4d414e44530d0a0d0a0d0a0d0a' }
@@ -1699,7 +1724,7 @@
                     '^XZ\n'
                 ];
                 break;
-            case 'ESCP':
+            case 'ESCPOS':
                 printData = [
                     //defaults to 'flavor: file'
                     { type: 'raw', format: 'image', data: 'assets/img/image_sample_bw.png', options: opts },
@@ -1735,7 +1760,7 @@
                     '^XZ\n'
                 ];
                 break;
-            case 'ESCP':
+            case 'ESCPOS':
                 printData = [
                     { type: 'raw', format: 'pdf', flavor: 'file', data: 'assets/pdf_sample.pdf', options: opts }
                 ];
@@ -1770,7 +1795,7 @@
                     '^XZ\n'
                 ];
                 break;
-            case 'ESCP':
+            case 'ESCPOS':
                 printData = [
                     { type: 'raw', format: 'html', flavor: 'file', data: 'https://qz.io/about/', options: opts }
                 ];
@@ -2273,9 +2298,9 @@
     /// Resets ///
     function resetRawOptions() {
         //config
-        $("#rawPerSpool").val(1);
+        $("#rawSpoolSize").val(1);
         $("#rawEncoding").val(null);
-        $("#rawEndOfDoc").val(null);
+        $("#rawSpoolEnd").val(null);
         $("#rawAltPrinting").prop('checked', false);
         $("#rawCopies").val(1);
 
@@ -2302,6 +2327,7 @@
         $("#pxlPrinterTray").val(null);
         $("#pxlRasterize").prop('checked', false);
         $("#pxlRotation").val(0);
+        $("#pxlSpoolSize").val("");
         $("#pxlScale").prop('checked', true);
         $("#pxlUnitsIN").prop('checked', true);
 
@@ -2334,6 +2360,9 @@
         //printer
         $("#pPxlWidth").val('');
         $("#pPxlHeight").val('');
+
+        //connection
+        $("#connectionGroup").css('display', 'none');
 
         $("#pxlContent").find(".dirty").removeClass("dirty");
     }
@@ -2606,7 +2635,20 @@
 
     //checkId = toggle checkbox, groupId = group/element to show, toggleId = group/element to hide
     function checkGroupActive(checkId, groupId, toggleId) {
-        if (isChecked($("#"+ checkId))) {
+        var checkBox = $("#"+ checkId);
+        var useVisibility = false;
+        var invisible = false;
+        if(typeof checkBox.prop("checked") === 'undefined') {
+            // if we're not dealing with a checkbox, rely blindly on visibility instead
+            useVisibility = true;
+            invisible = ($("#"+ groupId).css('display') == 'none');
+            if(invisible) {
+                checkBox.addClass("active");
+            } else {
+                checkBox.removeClass('active');
+            }
+        }
+        if (isChecked(checkBox) || (useVisibility && invisible)) {
             $("#"+ groupId).css('display', '');
             if (toggleId) { $("#"+ toggleId).css('display', 'none'); }
         } else {
@@ -2825,20 +2867,22 @@
         }
 
         var copies = 1;
+        var spoolSize = null;
         var jobName = null;
         if ($("#rawTab").hasClass("active")) {
             copies = includedValue($("#rawCopies"));
+            spoolSize = includedValue($("#rawSpoolSize"));
             jobName = includedValue($("#rawJobName"));
         } else {
             copies = includedValue($("#pxlCopies"));
+            spoolSize = includedValue($("#pxlSpoolSize"));
             jobName = includedValue($("#pxlJobName"));
         }
 
         cfg.reconfigure({
                             altPrinting: includedValue($("#rawAltPrinting"), isChecked($("#rawAltPrinting"), cleanConditions['rawAltPrinting'])),
                             encoding: includedValue($("#rawEncoding")),
-                            endOfDoc: includedValue($("#rawEndOfDoc")),
-                            perSpool: includedValue($("#rawPerSpool")),
+                            spool: { size: spoolSize, end: includedValue($("#rawSpoolEnd")) },
 
                             bounds: pxlBounds,
                             colorType: includedValue($("#pxlColorType")),

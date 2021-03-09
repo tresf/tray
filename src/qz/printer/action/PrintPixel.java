@@ -1,5 +1,6 @@
 package qz.printer.action;
 
+import javafx.print.PaperSource;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,7 +10,6 @@ import qz.utils.SystemUtilities;
 
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
-import javax.print.attribute.ResolutionSyntax;
 import javax.print.attribute.standard.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -19,18 +19,18 @@ import java.awt.print.PageFormat;
 import java.awt.print.Paper;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public abstract class PrintPixel {
 
     private static final Logger log = LoggerFactory.getLogger(PrintPixel.class);
 
     private static final List<Integer> MAC_BAD_IMAGE_TYPES = Arrays.asList(BufferedImage.TYPE_BYTE_BINARY, BufferedImage.TYPE_CUSTOM);
-
-    private static final List<String> PRINTER_TRAY_ALIASES = Arrays.asList("", "Tray ", "Paper Cassette ");
 
 
     protected PrintRequestAttributeSet applyDefaultSettings(PrintOptions.Pixel pxlOpts, PageFormat page, Media[] supported) {
@@ -45,13 +45,9 @@ public abstract class PrintPixel {
             attributes.add(pxlOpts.getOrientation().getAsOrientRequested());
         }
         if (pxlOpts.getPrinterTray() != null && !pxlOpts.getPrinterTray().isEmpty()) {
-            for(Media m : supported) {
-                for(String pta : PRINTER_TRAY_ALIASES) {
-                    if (m.toString().trim().equalsIgnoreCase(pta + pxlOpts.getPrinterTray().trim())) {
-                        attributes.add(m);
-                        break;
-                    }
-                }
+            Media tray = findMediaTray(supported, pxlOpts.getPrinterTray());
+            if (tray != null) {
+                attributes.add(tray);
             }
         }
 
@@ -164,7 +160,7 @@ public abstract class PrintPixel {
         return imgToPrint;
     }
 
-    protected Map<RenderingHints.Key,Object> buildRenderingHints(Object dithering, Object interpolation) {
+    protected static Map<RenderingHints.Key,Object> buildRenderingHints(Object dithering, Object interpolation) {
         Map<RenderingHints.Key,Object> rhMap = new HashMap<>();
         rhMap.put(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
         rhMap.put(RenderingHints.KEY_DITHERING, dithering);
@@ -182,6 +178,53 @@ public abstract class PrintPixel {
 
 
         return rhMap;
+    }
+
+    protected Media findMediaTray(Media[] supportedMedia, String traySelection) {
+        HashMap<String,Media> mediaTrays = new HashMap<>();
+        for(Media m : supportedMedia) {
+            if (m instanceof MediaTray) {
+                mediaTrays.put(m.toString(), m);
+            }
+        }
+
+        String tray = findTray(mediaTrays.keySet(), traySelection);
+        return mediaTrays.get(tray);
+    }
+
+    protected PaperSource findFXTray(Set<PaperSource> paperSources, String traySelection) {
+        Map<String,PaperSource> fxTrays = paperSources.stream().collect(Collectors.toMap(PaperSource::getName, Function.identity()));
+
+        String tray = findTray(fxTrays.keySet(), traySelection);
+        return fxTrays.get(tray);
+    }
+
+    private String findTray(Set<String> trayOptions, String traySelection) {
+        Pattern exactPattern = Pattern.compile("\\b" + Pattern.quote(traySelection) + "\\b", Pattern.CASE_INSENSITIVE);
+        Pattern fuzzyPattern = Pattern.compile("\\b.*?[" + Pattern.quote(traySelection) + "]+.*?\\b", Pattern.CASE_INSENSITIVE);
+        String bestFit = null;
+        Integer fuzzyFitDelta = null;
+
+        for(String option : trayOptions) {
+            Matcher exactly = exactPattern.matcher(option.trim());
+            Matcher fuzzily = fuzzyPattern.matcher(option.trim());
+
+            if (exactly.find()) {
+                bestFit = option;
+                break;
+            }
+
+            while(fuzzily.find()) {
+                //look for as close to exact match as possible
+                int delta = Math.abs(fuzzily.group().length() - traySelection.length());
+                if (fuzzyFitDelta == null || delta < fuzzyFitDelta) {
+                    fuzzyFitDelta = delta;
+                    bestFit = option;
+                }
+            }
+        }
+
+        return bestFit;
     }
 
 }

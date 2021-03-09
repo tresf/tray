@@ -70,6 +70,12 @@ public class WebApp extends Application {
         log.trace("New state: {} > {}", oldState, newState);
 
         if (newState == Worker.State.SUCCEEDED) {
+            boolean hasBody = (boolean)webView.getEngine().executeScript("document.body != null");
+            if (!hasBody) {
+                log.warn("Loaded page has no body - likely a redirect, skipping state");
+                return;
+            }
+
             //ensure html tag doesn't use scrollbars, clipping page instead
             Document doc = webView.getEngine().getDocument();
             NodeList tags = doc.getElementsByTagName("html");
@@ -83,15 +89,6 @@ public class WebApp extends Application {
                 base.getAttributes().setNamedItem(applied);
             }
 
-            // find and set page zoom for increased quality
-            double usableZoom = calculateSupportedZoom(pageWidth, pageHeight);
-            if (usableZoom < pageZoom) {
-                log.warn("Zoom level {} decreased to {} due to physical memory limitations", pageZoom, usableZoom);
-                pageZoom = usableZoom;
-            }
-            webView.setZoom(pageZoom);
-            log.trace("Zooming in by x{} for increased quality", pageZoom);
-
             //width was resized earlier (for responsive html), then calculate the best fit height
             // FIXME: Should only be needed when height is unknown but fixes blank vector prints
             double fittedHeight = findHeight();
@@ -100,6 +97,15 @@ public class WebApp extends Application {
             if (heightNeeded) {
                 pageHeight = fittedHeight;
             }
+
+            // find and set page zoom for increased quality
+            double usableZoom = calculateSupportedZoom(pageWidth, pageHeight);
+            if (usableZoom < pageZoom) {
+                log.warn("Zoom level {} decreased to {} due to physical memory limitations", pageZoom, usableZoom);
+                pageZoom = usableZoom;
+            }
+            webView.setZoom(pageZoom);
+            log.trace("Zooming in by x{} for increased quality", pageZoom);
 
             adjustSize(pageWidth * pageZoom, pageHeight * pageZoom);
 
@@ -173,7 +179,10 @@ public class WebApp extends Application {
                 if (useMonocle) {
                     log.trace("Initializing monocle platform");
                     System.setProperty("javafx.platform", "monocle");
-                    System.setProperty("glass.platform", "Monocle");
+                    // Don't set glass.platform on Linux per https://github.com/qzind/tray/issues/702
+                    if((SystemUtilities.isWindows() || SystemUtilities.isMac())) {
+                        System.setProperty("glass.platform", "Monocle");
+                    }
 
                     //software rendering required headless environments
                     if (headless) {
@@ -327,7 +336,6 @@ public class WebApp extends Application {
                             unlatch(null);
                         }
                         catch(Exception e) {
-                            log.error("Caught during snapshot");
                             unlatch(e);
                         }
                         finally {
@@ -429,9 +437,11 @@ public class WebApp extends Application {
         long memory = Runtime.getRuntime().maxMemory();
         int allowance = (memory / 1048576L) > 1024? 3:2;
         if (headless) { allowance--; }
-        long availSpace = (long)((memory << allowance) / 72d);
+        long availSpace = memory << allowance;
 
-        return Math.sqrt(availSpace / (width * height));
+        // Memory needed for print is roughly estimated as
+        // (width * height) [pixels needed] * (pageZoom * 72d) [print density used] * 3 [rgb channels]
+        return Math.sqrt(availSpace / ((width * height) * (pageZoom * 72d) * 3));
     }
 
     /**

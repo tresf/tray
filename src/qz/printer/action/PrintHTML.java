@@ -14,6 +14,7 @@ import com.sun.javafx.print.PrintHelper;
 import com.sun.javafx.print.Units;
 import javafx.print.*;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.ssl.Base64;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -37,6 +38,7 @@ import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -71,9 +73,15 @@ public class PrintHTML extends PrintImage implements PrintProcessor {
 
             for(int i = 0; i < printData.length(); i++) {
                 JSONObject data = printData.getJSONObject(i);
-                String source = data.getString("data");
 
                 PrintingUtilities.Flavor flavor = PrintingUtilities.Flavor.valueOf(data.optString("flavor", "FILE").toUpperCase(Locale.ENGLISH));
+
+                String source;
+                if (flavor == PrintingUtilities.Flavor.BASE64) {
+                    source = new String(Base64.decodeBase64(data.getString("data")), StandardCharsets.UTF_8);
+                } else {
+                    source = data.getString("data");
+                }
 
                 double pageZoom = (pxlOpts.getDensity() * pxlOpts.getUnits().as1Inch()) / 72.0;
                 if (pageZoom <= 1) { pageZoom = 1; }
@@ -112,10 +120,10 @@ public class PrintHTML extends PrintImage implements PrintProcessor {
                     JSONObject dataOpt = data.getJSONObject("options");
 
                     if (!dataOpt.isNull("pageWidth") && dataOpt.optDouble("pageWidth") > 0) {
-                        pageWidth = dataOpt.optDouble("pageWidth") * (72.0 / pxlOpts.getUnits().as1Inch());
+                        pageWidth = dataOpt.optDouble("pageWidth") * convertFactor;
                     }
                     if (!dataOpt.isNull("pageHeight") && dataOpt.optDouble("pageHeight") > 0) {
-                        pageHeight = dataOpt.optDouble("pageHeight") * (72.0 / pxlOpts.getUnits().as1Inch());
+                        pageHeight = dataOpt.optDouble("pageHeight") * convertFactor;
                     }
                 }
 
@@ -141,7 +149,19 @@ public class PrintHTML extends PrintImage implements PrintProcessor {
             for(WebAppModel model : models) {
                 try { images.add(WebApp.raster(model)); }
                 catch(Throwable t) {
-                    throw new PrinterException(t.getMessage());
+                    if (model.getZoom() > 1 && t instanceof IllegalArgumentException) {
+                        //probably a unrecognized image loader error, try at default zoom
+                        try {
+                            log.warn("Capture failed with increased zoom, attempting with default value");
+                            model.setZoom(1);
+                            images.add(WebApp.raster(model));
+                        }
+                        catch(Throwable tt) {
+                            throw new PrinterException(tt.getMessage());
+                        }
+                    } else {
+                        throw new PrinterException(t.getMessage());
+                    }
                 }
             }
 
@@ -177,8 +197,10 @@ public class PrintHTML extends PrintImage implements PrintProcessor {
                 settings.setPrintSides(PrintSides.TUMBLE);
             }
             if (pxlOpts.getPrinterTray() != null) {
-                fxPrinter.getPrinterAttributes().getSupportedPaperSources().stream()
-                        .filter(source -> pxlOpts.getPrinterTray().equals(source.getName())).forEach(settings::setPaperSource);
+                PaperSource tray = findFXTray(fxPrinter.getPrinterAttributes().getSupportedPaperSources(), pxlOpts.getPrinterTray());
+                if (tray != null) {
+                    settings.setPaperSource(tray);
+                }
             }
 
             if (pxlOpts.getDensity() > 0) {
@@ -259,6 +281,7 @@ public class PrintHTML extends PrintImage implements PrintProcessor {
                 }
             }
             catch(Throwable t) {
+                job.cancelJob();
                 throw new PrinterException(t.getMessage());
             }
 

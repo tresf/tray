@@ -152,8 +152,8 @@ public class PrintPDF extends PrintPixel implements PrintProcessor {
 
         if (!pxlOpts.isRasterize()) {
             if (pxlOpts.getDensity() > 0) {
-                //rasterization is automatically performed upon supplying a density, warn user if they aren't expecting this
-                log.warn("Supplying a print density for PDF printing rasterizes the document.");
+                // clear density for vector prints (applied via print attributes instead)
+                useDensity = 0;
             } else if (SystemUtilities.isMac() && Constants.JAVA_VERSION.compareWithBuildsTo(Version.valueOf("1.8.0+121")) < 0) {
                 log.warn("OSX systems cannot print vector PDF's, forcing raster to prevent crash.");
                 useDensity = options.getDefaultOptions().getDensity();
@@ -209,10 +209,23 @@ public class PrintPDF extends PrintPixel implements PrintProcessor {
             bundle.append(new PDFWrapper(doc, scale, false, (float)(useDensity * pxlOpts.getUnits().as1Inch()), false, pxlOpts.getOrientation(), hints), page, doc.getNumberOfPages());
         }
 
-        job.setJobName(pxlOpts.getJobName(Constants.PDF_PRINT));
-        job.setPageable(bundle.wrapAndPresent());
+        if (pxlOpts.getSpoolSize() > 0 && bundle.getNumberOfPages() > pxlOpts.getSpoolSize()) {
+            int jobNum = 1;
+            int offset = 0;
+            while(offset < bundle.getNumberOfPages()) {
+                job.setJobName(pxlOpts.getJobName(Constants.PDF_PRINT) + "-" + jobNum++);
+                job.setPageable(bundle.wrapAndPresent(offset, pxlOpts.getSpoolSize()));
 
-        printCopies(output, pxlOpts, job, attributes);
+                printCopies(output, pxlOpts, job, attributes);
+
+                offset += pxlOpts.getSpoolSize();
+            }
+        } else {
+            job.setJobName(pxlOpts.getJobName(Constants.PDF_PRINT));
+            job.setPageable(bundle.wrapAndPresent());
+
+            printCopies(output, pxlOpts, job, attributes);
+        }
     }
 
     private void rotatePage(PDDocument doc, PDPage page, double rotation) {

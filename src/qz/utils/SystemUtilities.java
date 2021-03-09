@@ -23,7 +23,11 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Locale;
+import java.util.TimeZone;
 
 import static com.sun.jna.platform.win32.WinReg.*;
 
@@ -37,6 +41,7 @@ public class SystemUtilities {
     // Name of the os, i.e. "Windows XP", "Mac OS X"
     private static final String OS_NAME = System.getProperty("os.name").toLowerCase(Locale.ENGLISH);
     private static final Logger log = LoggerFactory.getLogger(TrayManager.class);
+    private static final Locale defaultLocale = Locale.getDefault();
 
     private static Boolean darkDesktop;
     private static Boolean darkTaskbar;
@@ -53,6 +58,29 @@ public class SystemUtilities {
      */
     public static String getOS() {
         return OS_NAME;
+    }
+
+    /**
+     * Call to workaround Locale-specific bugs (See issue #680)
+     * Please call <code>restoreLocale()</code> as soon as possible
+     */
+    public static synchronized void swapLocale() {
+        Locale.setDefault(Locale.ENGLISH);
+    }
+
+    public static synchronized void restoreLocale() {
+        Locale.setDefault(defaultLocale);
+    }
+
+    public static String toISO(Date d) {
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'", Locale.ENGLISH);
+        TimeZone tz = TimeZone.getTimeZone("UTC");
+        df.setTimeZone(tz);
+        return df.format(d);
+    }
+
+    public static String timeStamp() {
+        return toISO(new Date());
     }
 
     public static Version getOSVersion() {
@@ -292,11 +320,14 @@ public class SystemUtilities {
 
     public static boolean isDarkTaskbar(boolean recheck) {
         if(darkTaskbar == null || recheck) {
-            if (!isWindows()) {
-                // Mac and Linux don't differentiate; return the cached darkDesktop value
-                darkTaskbar = isDarkDesktop();
-            } else {
+            if (isWindows()) {
                 darkTaskbar = WindowsUtilities.isDarkTaskbar();
+            } else if(isMac()) {
+                // Ignore, we'll set the template flag using JNA
+                darkTaskbar = false;
+            } else {
+                // Linux doesn't differentiate; return the cached darkDesktop value
+                darkTaskbar = isDarkDesktop();
             }
         }
         return darkTaskbar.booleanValue();
@@ -310,7 +341,7 @@ public class SystemUtilities {
         if (darkDesktop == null || recheck) {
             // Check for Dark Mode on MacOS
             if (isMac()) {
-                darkDesktop = MacUtilities.isDarkMode();
+                darkDesktop = MacUtilities.isDarkDesktop();
             } else if (isWindows()) {
                 darkDesktop = WindowsUtilities.isDarkDesktop();
             } else {
@@ -328,7 +359,8 @@ public class SystemUtilities {
     public static boolean prefersMaskTrayIcon() {
         if (Constants.MASK_TRAY_SUPPORTED) {
             if (SystemUtilities.isMac()) {
-                return true;
+                // Assume a pid of -1 is a broken JNA
+                return MacUtilities.getProcessID() != -1;
             } else if (SystemUtilities.isWindows() && SystemUtilities.getOSVersion().getMajorVersion() >= 10) {
                 return true;
             }
