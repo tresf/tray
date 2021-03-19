@@ -271,11 +271,12 @@ public class ArgParser {
                 case BUILD:
                     // Handle build commands (e.g. jlink)
                     exitStatus = processBuildArgs(found);
+                    return true;
                 case INSTALLER:
                     // Handle install commands (e.g. install, uninstall, certgen, etc)
                     exitStatus = processInstallerArgs(found, args);
+                    return true;
             }
-            return true;
         }
 
         // Last, handle all other commands including normal startup
