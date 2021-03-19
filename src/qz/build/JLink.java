@@ -28,7 +28,8 @@ import java.util.LinkedHashSet;
 public class JLink {
     private static final Logger log = LoggerFactory.getLogger(JLink.class);
     private static final String DOWNLOAD_URL = "https://github.com/AdoptOpenJDK/openjdk%s-binaries/releases/download/jdk-%s/OpenJDK%sU-jdk_%s_%s_%s_%s.%s";
-    private static final String JAVA_VERSION = "11.0.7+10";
+    private static final String JAVA_VENDOR = "AdoptOpenJDK";
+    private static final String JAVA_VERSION = "11.0.10+9";
     private static final String JAVA_MAJOR = JAVA_VERSION.split("\\.")[0];
     private static final String JAVA_MINOR = JAVA_VERSION.split("\\.")[1];
     private static final String JAVA_PATCH = JAVA_VERSION.split("\\.|\\+|-")[2];
@@ -180,6 +181,8 @@ public class JLink {
             HashMap<String, String> fieldMap = new HashMap<>();
             fieldMap.put("%BUNDLE_ID%", MacUtilities.getBundleId() + ".jre"); // e.g. io.qz.qz-tray.jre
             fieldMap.put("%BUNDLE_VERSION%", String.format("%s.%s.%s", JAVA_MAJOR, JAVA_MINOR, JAVA_PATCH));
+            fieldMap.put("%BUNDLE_VERSION_FULL%", JAVA_VERSION);
+            fieldMap.put("%BUNDLE_VENDOR%", JAVA_VENDOR);
             log.info("Deploying {}/Info.plist", macOS.getParent());
             FileUtilities.configureAssetFile("assets/mac-runtime.plist.in", new File(macOS.getParentFile(), "Info.plist"), fieldMap, JLink.class);
         }
