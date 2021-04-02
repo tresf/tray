@@ -105,8 +105,16 @@
         </exec>
 
         <!-- Cleanup lingering files (for other OS installers) -->
-        <delete dir="${dist.dir}/Contents/Resources"/>
-        <delete dir="${dist.dir}/Contents/MacOS"/>
+        <!-- FIXME BRING BACK BEFORE MERGE <delete dir="${dist.dir}/Contents/Resources"/> -->
+        <!-- FIXME BRING BACK BEFORE MERGE <delete dir="${dist.dir}/Contents/MacOS"/> -->
+        <!-- FIXME BUILD AN APP HERE LOCALLY -->
+        <delete dir="${dist.dir}/../QZ Tray.app"/>
+        <move todir="${dist.dir}/../QZ Tray.app">
+            <fileset dir="${dist.dir}"/>
+        </move>
+        <chmod perm="a+x">
+            <fileset dir="${dist.dir}/../QZ Tray.app/Contents/MacOS"/>
+        </chmod>
     </target>
 
     <target name="codesign-jre" if="codesign.mac">
