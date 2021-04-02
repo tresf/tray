@@ -8,7 +8,7 @@
     <import file="ant/linux/installer.xml"/>
     <import file="ant/windows/installer.xml"/>
 
-    <target name="distribute" depends="init,clean,download-javafx,build-jar,override-authcert,include-assets,whitelist-certs">
+    <target name="distribute" depends="init,download-javafx,build-jar,override-authcert,include-assets,whitelist-certs">
         <antcall target="tidy-javafx-dist"/>
         <echo level="info">Process complete</echo>
     </target>
