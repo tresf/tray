@@ -1,6 +1,7 @@
 package qz.printer.action;
 
 import com.github.zafarkhaja.semver.Version;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import javafx.animation.AnimationTimer;
@@ -120,8 +121,8 @@ public class WebApp extends Application {
             }
 
             log.trace("Set HTML page height to {}", pageHeight);
-
-            autosize(webView);
+            webView.autosize();
+            NodeHelper.updatePeer(webView);
 
             Platform.runLater(() -> new AnimationTimer() {
                 int frames = 0;
@@ -227,12 +228,7 @@ public class WebApp extends Application {
         log.debug("Started JavaFX");
 
         webView = new WebView();
-
-        // Fix blank pages for WebKit > 609.1
-        // See also https://github.com/qzind/tray/issues/778
-        if(getWebkitVersion() == null || getWebkitVersion().greaterThan(Version.forIntegers(609, 1, 0))) {
-            VECTOR_FRAMES = 30; // 30 pulses needed for vector graphics
-        }
+        log.info("WebKit version {} detected", getWebkitVersion());
 
         st.setScene(new Scene(webView));
         stage = st;
@@ -303,6 +299,15 @@ public class WebApp extends Application {
                                     activePage.setX((-col * printBounds.getWidth()) / useScale);
                                     activePage.setY((-row * printBounds.getHeight()) / useScale);
 
+                                    // Calling snapshot() fixes blank pages without showing the stage
+                                    // https://github.com/qzind/tray/issues/513
+                                    // https://github.com/qzind/tray/issues/699
+                                    // https://github.com/qzind/tray/issues/225
+                                    // https://support.gluonhq.com/browse/SUPQZ-1
+                                    // It also fixes a regression introduced in JavaFX 17-ea+3 / Java 8u291
+                                    // https://github.com/qzind/tray/issues/778
+                                    // https://support.gluonhq.com/browse/SUPQZ-14
+                                    webView.snapshot(null, null);
                                     job.printPage(webView);
                                 }
 
@@ -346,6 +351,9 @@ public class WebApp extends Application {
         raster = true;
 
         load(model, (int frames) -> {
+            // Wait for resizing to finish
+            // https://github.com/qzind/tray/issues/547
+            // https://github.com/qzind/tray/issues/32
             if (frames == CAPTURE_FRAMES) {
                 log.debug("Attempting image capture");
 
@@ -404,7 +412,8 @@ public class WebApp extends Application {
                 webView.setMaxHeight(1);
             }
 
-            autosize(webView);
+            webView.autosize();
+            NodeHelper.updatePeer(webView);
 
             printAction = action;
 
@@ -425,34 +434,6 @@ public class WebApp extends Application {
         webView.setMinSize(toWidth, toHeight);
         webView.setPrefSize(toWidth, toHeight);
         webView.setMaxSize(toWidth, toHeight);
-    }
-
-    /**
-     * Fix blank page after autosize is called
-     */
-    public static void autosize(WebView webView) {
-        webView.autosize();
-
-        if (!raster) {
-            // Call updatePeer; fixes a bug with webView resizing
-            // Can be avoided by calling stage.show() but breaks headless environments
-            // See: https://github.com/qzind/tray/issues/513
-            String[] methods = {"impl_updatePeer" /*jfx8*/, "doUpdatePeer" /*jfx11*/};
-            try {
-                for(Method m : webView.getClass().getDeclaredMethods()) {
-                    for(String method : methods) {
-                        if (m.getName().equals(method)) {
-                            m.setAccessible(true);
-                            m.invoke(webView);
-                            return;
-                        }
-                    }
-                }
-            }
-            catch(SecurityException | ReflectiveOperationException e) {
-                log.warn("Unable to update peer; Blank pages may occur.", e);
-            }
-        }
     }
 
     private static double calculateSupportedZoom(double width, double height) {
@@ -501,7 +482,6 @@ public class WebApp extends Application {
                     if (split.length > 0) {
                         try {
                             webkitVersion = Version.valueOf(split[0]);
-                            log.info("WebKit version {} detected", webkitVersion);
                         } catch(Exception ignore) {}
                     }
                 }
