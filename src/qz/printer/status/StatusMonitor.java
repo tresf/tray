@@ -73,11 +73,13 @@ public class StatusMonitor {
         }
     }
 
-    public synchronized static boolean startListening(SocketConnection connection, JSONArray printerNames) throws JSONException {
+    public synchronized static boolean startListening(SocketConnection connection, JSONArray printerNames, boolean jobData) throws JSONException {
         if (printerNames.isNull(0)) {  //listen to all printers
+            if (jobData) connection.getStatusListener().enableDataOnPrinter(ALL_PRINTERS);
             if (!clientPrinterConnections.containsKey(ALL_PRINTERS)) {
                 clientPrinterConnections.add(ALL_PRINTERS, connection);
             } else if (!clientPrinterConnections.getValues(ALL_PRINTERS).contains(connection)) {
+                //todo shouldn't this be clientPrinterConnections.getValues(ALL_PRINTERS).add(connection);
                 clientPrinterConnections.add(ALL_PRINTERS, connection);
             }
         } else {  // listen to specific printer(s)
@@ -96,6 +98,7 @@ public class StatusMonitor {
                 if (printerName == null || "".equals(printerName)) {
                     throw new IllegalArgumentException();
                 }
+                if(jobData) connection.getStatusListener().enableDataOnPrinter(printerName);
                 if (!clientPrinterConnections.containsKey(printerName)) {
                     clientPrinterConnections.add(printerName, connection);
                 } else if (!clientPrinterConnections.getValues(printerName).contains(connection)) {
