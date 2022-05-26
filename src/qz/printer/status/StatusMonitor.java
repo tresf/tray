@@ -95,7 +95,7 @@ public class StatusMonitor {
                         printerName = NativePrinterMap.getInstance().lookupPrinterId(printerNames.getString(i));
                     }
                 }
-                if (printerName == null || "".equals(printerName)) {
+                if (printerName == null || printerName.equals("")) {
                     throw new IllegalArgumentException();
                 }
                 if(jobData) connection.getStatusListener().enableDataOnPrinter(printerName);

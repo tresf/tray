@@ -57,7 +57,7 @@ var qz = (function() {
 
         //stream types
         streams: {
-            serial: 'SERIAL', usb: 'USB', hid: 'HID', printer: 'PRINTER', jobData: 'JOB_DATA', file: 'FILE', socket: 'SOCKET'
+            serial: 'SERIAL', usb: 'USB', hid: 'HID', printer: 'PRINTER', file: 'FILE', socket: 'SOCKET'
         },
 
 
@@ -312,9 +312,6 @@ var qz = (function() {
                                     case _qz.streams.printer:
                                         _qz.printers.callPrinter(JSON.parse(returned.event));
                                         break;
-                                    case _qz.streams.jobData:
-                                        _qz.printers.callJobData(JSON.parse(returned.event));
-                                        break;
                                     case _qz.streams.file:
                                         _qz.file.callFile(JSON.parse(returned.event));
                                         break;
@@ -540,18 +537,6 @@ var qz = (function() {
                     }
                 } else {
                     _qz.printers.printerCallbacks(streamEvent);
-                }
-            },
-            /** List of functions called when receiving job data from printer connection. */
-            jobDataCallbacks: [],
-            /** Calls all functions registered to listen for job data events. */
-            callJobData: function(streamEvent) {
-                if (Array.isArray(_qz.printers.jobDataCallbacks)) {
-                    for(var i = 0; i < _qz.printers.jobDataCallbacks.length; i++) {
-                        _qz.printers.jobDataCallbacks[i](streamEvent);
-                    }
-                } else {
-                    _qz.printers.jobDataCallbacks(streamEvent);
                 }
             }
         },
@@ -1272,33 +1257,18 @@ var qz = (function() {
              * @see qz.printers.setPrinterCallbacks
              *
              * @param {null|string|Array<string>} printers Printer or list of printers to listen to, null listens to all.
+             * @param {null|bool} todo: doc
              *
              * @memberof qz.printers
              */
-            startListening: function(printers) {
+            startListening: function(printers, jobData) {
                 if (!Array.isArray(printers)) {
                     printers = [printers];
                 }
                 var params = {
                     printerNames: printers
                 };
-                return _qz.websocket.dataPromise('printers.startListening', params);
-            },
-
-            /**
-             * todo
-             * @param {null|string|Array<string>} printers Printer or list of printers to listen to, null listens to all.
-             *
-             * @memberof qz.printers
-             */
-            startDataListening: function(printers) {
-                if (!Array.isArray(printers)) {
-                    printers = [printers];
-                }
-                var params = {
-                    printerNames: printers,
-                    withData: true
-                };
+                if (jobData == true) params.jobData = true;
                 return _qz.websocket.dataPromise('printers.startListening', params);
             },
 
@@ -1345,14 +1315,6 @@ var qz = (function() {
             setPrinterCallbacks: function(calls) {
                 _qz.printers.printerCallbacks = calls;
             },
-
-             /**
-              * todo
-              * @memberof qz.printers
-              */
-             setJobDataCallbacks: function(calls) {
-                 _qz.printers.jobDataCallbacks = calls;
-             }
         },
 
         /**

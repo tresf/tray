@@ -8,7 +8,7 @@ import org.apache.logging.log4j.Logger;
 public class StreamEvent {
 
     public enum Stream {
-        SERIAL, USB, HID, PRINTER, JOB_DATA, FILE, SOCKET
+        SERIAL, USB, HID, PRINTER, FILE, SOCKET
     }
 
     public enum Type {

@@ -18,14 +18,17 @@ import org.apache.logging.log4j.Logger;
 import qz.common.Constants;
 
 import java.awt.*;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.*;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import static com.sun.jna.platform.win32.WinReg.*;
 import static qz.utils.SystemUtilities.*;
@@ -36,9 +39,11 @@ import static java.nio.file.attribute.AclEntryFlag.*;
 public class WindowsUtilities {
     protected static final Logger log = LogManager.getLogger(WindowsUtilities.class);
     private static String THEME_REG_KEY = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
+    private static String SPOOLER_REG_KEY = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Print\\Printers";
     private static final String AUTHENTICATED_USERS_SID = "S-1-5-11";
     private static Boolean isWow64;
     private static Integer pid;
+    private static String defaultSpoolerLocation;
 
     public static boolean isDarkDesktop() {
         // 0 = Dark Theme.  -1/1 = Light Theme
@@ -73,6 +78,21 @@ public class WindowsUtilities {
             }
         }
         return (int)(Toolkit.getDefaultToolkit().getScreenResolution() / 96.0);
+    }
+
+    public static Path getSpoolerLocation(String printerName) throws FileNotFoundException {
+        //todo do we need to worry about encoding?
+        String regValue = getRegString(HKEY_LOCAL_MACHINE, SPOOLER_REG_KEY + printerName, "SpoolDirectory");
+        if (regValue == null || regValue.isEmpty()) {
+            if (defaultSpoolerLocation == null || defaultSpoolerLocation.isEmpty()) {
+                //todo since this value is universal, it should be public static
+                defaultSpoolerLocation = getRegString(HKEY_LOCAL_MACHINE, SPOOLER_REG_KEY, "DefaultSpoolDirectory");
+            }
+            regValue = defaultSpoolerLocation;
+        }
+        Path spoolerLocation = Paths.get(regValue);
+        if (regValue == null || regValue.isEmpty() || !Files.exists(spoolerLocation)) throw new FileNotFoundException("Failed to locate spooler output.");
+        return spoolerLocation;
     }
 
     // gracefully swallow InvocationTargetException

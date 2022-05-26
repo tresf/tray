@@ -1094,7 +1094,7 @@
                                     <button type="button" class="btn btn-success" onclick="startPrintersListen($('#configPrinter').text())">
                                         Current Printer
                                     </button>
-                                    <button type="button" class="btn btn-default" onclick="getPrintersStatus()">Request current status</button>
+                                    <button type="button" class="btn btn-default" onclick="getPrintersStatus()">Request Current Status</button>
                                 </div>
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-warning" onclick="stopPrintersListen()">Stop Listening</button>
@@ -1112,6 +1112,12 @@
                             </div>
 
                             <div class="panel-body">
+                                <div class="form-group form-inline">
+                                    <label>
+                                        Include Raw Job Data
+                                    </label>
+                                    <input type="checkbox" id="rawData" class="pull-right"/>
+                                </div>
                                 <div class="row">
                                     <div class="col-md-12">
                                         <pre id="printersLog"></pre>
@@ -2319,12 +2325,13 @@
 
     /// Status ///
     function startPrintersListen(printerName) {
+        includeRawData = $("#rawData").prop("checked");
         if (printerName === "NONE") {
             return displayMessage("Please search for a valid printer first", "alert-warning");
         }
         qz.printers.stopListening().then(function() {
             clearPrintersLog();
-            return qz.printers.startListening(printerName);
+            return qz.printers.startListening(printerName, includeRawData);
         }).then(function() {
             displayMessage("Started listening for " + (printerName ? printerName : "all") + " printer events");
         }).catch(displayError);
@@ -2734,11 +2741,6 @@
         addPrintersLog(streamEvent);
     });
 
-    qz.printers.setJobDataCallbacks(function(streamEvent) {
-        //todo
-        console.log(streamEvent);
-    });
-
     qz.file.setFileCallbacks(function(streamEvent) {
         if (streamEvent.type !== 'ERROR') {
             var text = "<h5>File IO Event</h5>" +
@@ -2843,8 +2845,14 @@
     }
 
     function addPrintersLog(streamEvent) {
-        var icon = '<span class="fa ' + (streamEvent.eventType == 'JOB' ? 'fa-exchange' : 'fa-print') + '"></span>&nbsp;';
-        var msg = '<p class="' + (streamEvent.severity || "") + ' text-nowrap">' + icon + new Date().toString() + ": " + streamEvent.message + "</p>";
+        var msg;
+        if (streamEvent.eventType == "JOB_DATA") {
+            var icon = '<span class="fa fa-file-o"></span>&nbsp;';
+            msg = '<p class="INFO text-nowrap">' + icon + new Date().toString() + ": JOB DATA: " + streamEvent.data.substring(0, 64) + "...</p>";
+        } else {
+            var icon = '<span class="fa ' + (streamEvent.eventType == 'JOB' ? 'fa-exchange' : 'fa-print') + '"></span>&nbsp;';
+            msg = '<p class="' + (streamEvent.severity || "") + ' text-nowrap">' + icon + new Date().toString() + ": " + streamEvent.message + "</p>";
+        }
         var $log = $("#printersLog");
         $log.html($log.html() + msg);
     }
