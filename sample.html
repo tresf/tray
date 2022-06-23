@@ -1118,6 +1118,12 @@
                                     </label>
                                     <input type="checkbox" id="rawData" class="pull-right"/>
                                 </div>
+                                <div class="form-group form-inline">
+                                    <label>
+                                        Max Raw Job Data Size
+                                    </label>
+                                    <input type="number" id="rawDataSize" class="pull-right"/>
+                                </div>
                                 <div class="row">
                                     <div class="col-md-12">
                                         <pre id="printersLog"></pre>
@@ -2326,12 +2332,17 @@
     /// Status ///
     function startPrintersListen(printerName) {
         includeRawData = $("#rawData").prop("checked");
+        rawDataSize = $("#rawDataSize").val();
         if (printerName === "NONE") {
             return displayMessage("Please search for a valid printer first", "alert-warning");
         }
         qz.printers.stopListening().then(function() {
             clearPrintersLog();
-            return qz.printers.startListening(printerName, includeRawData);
+            var params = {
+                jobData: includeRawData,
+                maxJobData: rawDataSize
+            };
+            return qz.printers.startListening(printerName, params);
         }).then(function() {
             displayMessage("Started listening for " + (printerName ? printerName : "all") + " printer events");
         }).catch(displayError);

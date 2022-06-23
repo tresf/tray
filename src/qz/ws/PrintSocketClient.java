@@ -259,7 +259,7 @@ public class PrintSocketClient {
                 if (!connection.hasStatusListener()) {
                     connection.startStatusListener(new StatusSession(session));
                 }
-                StatusMonitor.startListening(connection, params.getJSONArray("printerNames"), params.optBoolean("jobData", false));
+                StatusMonitor.startListening(connection, params.getJSONArray("printerNames"), params.optBoolean("jobData", false), params.optInt("maxJobData", -1));
                 sendResult(session, UID, null);
                 break;
             case PRINTERS_GET_STATUS:

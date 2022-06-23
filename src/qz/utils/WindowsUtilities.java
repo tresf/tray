@@ -25,10 +25,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.*;
+import java.util.*;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.NoSuchElementException;
 
 import static com.sun.jna.platform.win32.WinReg.*;
 import static qz.utils.SystemUtilities.*;
@@ -43,6 +41,8 @@ public class WindowsUtilities {
     private static final String AUTHENTICATED_USERS_SID = "S-1-5-11";
     private static Boolean isWow64;
     private static Integer pid;
+    private static HashMap<String, Path> printerSpoolerLocations = new HashMap<>();
+
     private static String defaultSpoolerLocation;
 
     public static boolean isDarkDesktop() {
@@ -82,16 +82,19 @@ public class WindowsUtilities {
 
     public static Path getSpoolerLocation(String printerName) throws FileNotFoundException {
         //todo do we need to worry about encoding?
+        //todo if the spooler restarts, the locations could change. detect spooler restart?
+        if (printerSpoolerLocations.containsKey(printerName)) return printerSpoolerLocations.get(printerName);
+
         String regValue = getRegString(HKEY_LOCAL_MACHINE, SPOOLER_REG_KEY + printerName, "SpoolDirectory");
         if (regValue == null || regValue.isEmpty()) {
             if (defaultSpoolerLocation == null || defaultSpoolerLocation.isEmpty()) {
-                //todo since this value is universal, it should be public static
                 defaultSpoolerLocation = getRegString(HKEY_LOCAL_MACHINE, SPOOLER_REG_KEY, "DefaultSpoolDirectory");
             }
             regValue = defaultSpoolerLocation;
         }
         Path spoolerLocation = Paths.get(regValue);
         if (regValue == null || regValue.isEmpty() || !Files.exists(spoolerLocation)) throw new FileNotFoundException("Failed to locate spooler output.");
+        printerSpoolerLocations.put(printerName, spoolerLocation);
         return spoolerLocation;
     }
 

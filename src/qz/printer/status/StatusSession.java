@@ -13,14 +13,24 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.Map;
 
 public class StatusSession {
     private static final Logger log = LogManager.getLogger(StatusSession.class);
     private Session session;
     //todo investigate moving this to nativePrinter.
-    private HashMap<String, Path> printerSpoolerMap = new HashMap<>();
+    private HashMap<String, Spooler> printerSpoolerMap = new HashMap<>();
 
     private static final String ALL_PRINTERS = "";
+
+    private class Spooler{
+        public Path path;
+        public int maxJobData;
+        public Spooler(Path path, int maxJobData) {
+            this.path = path;
+            this.maxJobData = maxJobData;
+        }
+    }
 
     public StatusSession(Session session) {
         this.session = session;
@@ -34,10 +44,28 @@ public class StatusSession {
         }
     }
 
-    public void enableDataOnPrinter(String printer) throws UnsupportedOperationException {
+    public void enableDataOnPrinter(String printer, int maxJobData) throws UnsupportedOperationException {
         if (!SystemUtilities.isWindows()) throw new UnsupportedOperationException("Job data listeners are only supported on Windows");
-        // Lookup spooler locations lazily
-        if (!printerSpoolerMap.containsKey(printer)) printerSpoolerMap.put(printer, null);
+        if (printerSpoolerMap.containsKey(printer)) {
+            printerSpoolerMap.get(printer).maxJobData = maxJobData;
+        } else {
+            // Lookup spooler path lazily
+            printerSpoolerMap.put(printer, new Spooler(null, maxJobData));
+        }
+        if (printer.equals(ALL_PRINTERS)) setAllPrintersMaxJobData(maxJobData);
+    }
+
+    private void setAllPrintersMaxJobData(int maxBytes) {
+        for(Map.Entry<String, Spooler> entry : printerSpoolerMap.entrySet()) {
+            entry.getValue().maxJobData = maxBytes;
+        }
+    }
+
+    private int getAllPrintersMaxJobData() {
+        if (printerSpoolerMap.containsKey(ALL_PRINTERS)) {
+            return printerSpoolerMap.get(ALL_PRINTERS).maxJobData;
+        }
+        return -1;
     }
 
     private StreamEvent createJobDataStream(Status status) {
@@ -71,9 +99,15 @@ public class StatusSession {
         String data = null;
         try {
             //todo maybe if the spooler location cant be found, this exception should make it to the client. Note, an exception would be thrown for each status
-            printerSpoolerMap.putIfAbsent(printer, WindowsUtilities.getSpoolerLocation(printer));
-            Path spoolerLocation = printerSpoolerMap.get(printer);
-            data = new String(Files.readAllBytes(spoolerLocation.resolve(String.format("%05d", jobId) + ".SPL")));
+            if (!printerSpoolerMap.containsKey(printer)) {
+                printerSpoolerMap.put(printer, new Spooler(null, getAllPrintersMaxJobData()));
+            }
+            Spooler spooler = printerSpoolerMap.get(printer);
+            if (spooler.path == null) spooler.path = WindowsUtilities.getSpoolerLocation(printer);
+            if (spooler.maxJobData != -1 && Files.size(spooler.path) > spooler.maxJobData) {
+                throw new IOException("File too large, omitting result. Size:" + Files.size(spooler.path) + " MaxJobData:" + spooler.maxJobData);
+            }
+            data = new String(Files.readAllBytes(spooler.path.resolve(String.format("%05d", jobId) + ".SPL")));
         }
         catch(IOException e) {
             log.error("Failed to retrieve job data from job #{}", jobId, e);
