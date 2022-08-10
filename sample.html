@@ -1107,34 +1107,41 @@
                 <div class="row" style="margin-top: 1em;">
                     <div class="col-md-12">
                         <div class="panel panel-default">
-                            <div class="panel-heading">
-                                <h4 class="panel-title">Event Log</h4>
-                            </div>
-
                             <div class="panel-body">
-                                <div class="form-group form-inline">
-                                    <label>
-                                        Include Raw Job Data
-                                    </label>
-                                    <input type="checkbox" id="rawData" class="pull-right"/>
-                                </div>
-                                <div class="form-group form-inline">
-                                    <label>
-                                        Max Raw Job Data Size
-                                    </label>
-                                    <input type="number" id="rawDataSize" class="pull-right"/>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <pre id="printersLog"></pre>
+                                <fieldset>
+                                    <legend>Options</legend>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group form-inline">
+                                                <label class="tip" for="jobData" data-toggle="tooltip" title="Returns raw spool file content for printers configured to keep spooled documents (Windows only)">
+                                                    Include Raw Job Data
+                                                </label>
+                                                <input type="checkbox" id="jobData" class="pull-right"/>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 pull-right">
+                                            <div class="form-group form-inline">
+                                                <label class="tip" for="maxJobData" data-toggle="tooltip" title="Maximum size in bytes of spool file content to return (Windows only)">
+                                                Raw Job Data Size
+                                                </label>
+                                                <input type="number" id="maxJobData" class="pull-right"/>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                                <hr />
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <button type="button" class="btn btn-danger pull-right" onclick="clearPrintersLog();">Clear</button>
+                                    <hr />
+                                    <legend>Event Log</legend>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <pre id="printersLog"></pre>
+                                        </div>
                                     </div>
-                                </div>
+                                    <div class="row">
+                                        <div class="col-md-12">
+
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-danger pull-right" onclick="clearPrintersLog();"><i class="fa fa-trash"></i> Clear</button>
+                                </fieldset>
                             </div>
                         </div>
                     </div>
@@ -2331,16 +2338,16 @@
 
     /// Status ///
     function startPrintersListen(printerName) {
-        includeRawData = $("#rawData").prop("checked");
-        rawDataSize = $("#rawDataSize").val();
+        var jobData = $("#jobData").prop("checked");
+        var maxJobData = $("#maxJobData").val();
         if (printerName === "NONE") {
             return displayMessage("Please search for a valid printer first", "alert-warning");
         }
         qz.printers.stopListening().then(function() {
             clearPrintersLog();
             var params = {
-                jobData: includeRawData,
-                maxJobData: rawDataSize
+                jobData: jobData,
+                maxJobData: maxJobData
             };
             return qz.printers.startListening(printerName, params);
         }).then(function() {

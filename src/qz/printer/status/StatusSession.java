@@ -45,7 +45,12 @@ public class StatusSession {
     }
 
     public void enableDataOnPrinter(String printer, int maxJobData) throws UnsupportedOperationException {
-        if (!SystemUtilities.isWindows()) throw new UnsupportedOperationException("Job data listeners are only supported on Windows");
+        if (!SystemUtilities.isWindows()) {
+            throw new UnsupportedOperationException("Job data listeners are only supported on Windows");
+        }
+        if (false /* TODO: implement a system preference indicating job data is supported */) {
+            throw new UnsupportedOperationException("Job data listeners are currently disabled");
+        }
         if (printerSpoolerMap.containsKey(printer)) {
             printerSpoolerMap.get(printer).maxJobData = maxJobData;
         } else {
