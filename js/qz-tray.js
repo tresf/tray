@@ -1264,15 +1264,14 @@ var qz = (function() {
              * @memberof qz.printers
              */
             startListening: function(printers, options) {
-                if (!options) options = {}; //prevent error from undefined parameter
                 if (!Array.isArray(printers)) {
                     printers = [printers];
                 }
                 var params = {
                     printerNames: printers
                 };
-                if (options.jobData == true) params.jobData = true;
-                if (options.maxJobData) params.maxJobData = options.maxJobData;
+                if (options && options.jobData == true) params.jobData = true;
+                if (options && options.maxJobData) params.maxJobData = options.maxJobData;
                 return _qz.websocket.dataPromise('printers.startListening', params);
             },
 
