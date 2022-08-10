@@ -1317,7 +1317,7 @@ var qz = (function() {
              */
             setPrinterCallbacks: function(calls) {
                 _qz.printers.printerCallbacks = calls;
-            },
+            }
         },
 
         /**
