@@ -1257,7 +1257,9 @@ var qz = (function() {
              * @see qz.printers.setPrinterCallbacks
              *
              * @param {null|string|Array<string>} printers Printer or list of printers to listen to, null listens to all.
-             * @param {null|bool} todo: doc
+             * @param {Object|null} [options] Printer listener options
+             *  @param {null|boolean} [options.jobData=false] Flag indicating if raw spool file content should be return as well as status information (Windows only)
+             *  @param {null|number} [options.maxJobData=0] Maximum number of bytes to returns for raw spooled file content (Windows only)
              *
              * @memberof qz.printers
              */
