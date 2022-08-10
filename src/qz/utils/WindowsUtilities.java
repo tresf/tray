@@ -38,6 +38,8 @@ public class WindowsUtilities {
     protected static final Logger log = LogManager.getLogger(WindowsUtilities.class);
     private static String THEME_REG_KEY = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
     private static String SPOOLER_REG_KEY = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Print\\Printers";
+    private static String TRAY_REG_CHEVRON_KEY = "Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\TrayNotify";
+    private static String TRAY_REG_POLICY_KEY = "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer";
     private static final String AUTHENTICATED_USERS_SID = "S-1-5-11";
     private static Boolean isWow64;
     private static Integer pid;
@@ -65,7 +67,23 @@ public class WindowsUtilities {
         return true;
     }
 
-    public static int getScaleFactor() {
+    /**
+     * Check known configurations which hide the Windows SystemTray area
+     */
+    public static boolean isHiddenSystemTray() {
+        // Windows 11 22H2+: Check chevron is visible (assume "1" if key is missing)
+        Integer chevronVisibility = getRegInt(HKEY_CURRENT_USER, TRAY_REG_CHEVRON_KEY, "SystemTrayChevronVisibility");
+        if(chevronVisibility == null) chevronVisibility = 1;
+
+        // Windows 2003+: Check user policy (assume "0" if key is missing)
+        Integer explorerPolicy = getRegInt(HKEY_CURRENT_USER, TRAY_REG_POLICY_KEY, "NoTrayItemsDisplay");
+        if(explorerPolicy == null) explorerPolicy = 0;
+
+        // Return true if either flag is set
+        return chevronVisibility == 0 || explorerPolicy == 1;
+    }
+
+    public static double getScaleFactor() {
         if (Constants.JAVA_VERSION.lessThan(Version.valueOf("9.0.0"))) {
             WinDef.HDC hdc = GDI32.INSTANCE.CreateCompatibleDC(null);
             if (hdc != null) {
@@ -73,11 +91,11 @@ public class WindowsUtilities {
                 int logical = GDI32.INSTANCE.GetDeviceCaps(hdc, 117 /* DESKTOPVERTRES */);
                 GDI32.INSTANCE.DeleteDC(hdc);
                 if (logical != 0 && logical/actual > 1) {
-                    return logical/actual;
+                    return (double)logical/actual;
                 }
             }
         }
-        return (int)(Toolkit.getDefaultToolkit().getScreenResolution() / 96.0);
+        return Toolkit.getDefaultToolkit().getScreenResolution() / 96.0d;
     }
 
     public static Path getSpoolerLocation(String printerName) throws FileNotFoundException {

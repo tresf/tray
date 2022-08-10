@@ -417,7 +417,7 @@ public class SystemUtilities {
             } else if (isWindows()) {
                 darkDesktop = WindowsUtilities.isDarkDesktop();
             } else {
-                darkDesktop = UbuntuUtilities.isDarkMode();
+                darkDesktop = LinuxUtilities.isDarkMode();
             }
         }
         return darkDesktop.booleanValue();
@@ -444,7 +444,7 @@ public class SystemUtilities {
         try {
             UIManager.getDefaults().put("Button.showMnemonics", Boolean.TRUE);
             boolean darculaThemeNeeded = true;
-            if(!isMac() && (isUnix() && UbuntuUtilities.isDarkMode())) {
+            if(!isMac() && (isUnix() && LinuxUtilities.isDarkMode())) {
                 darculaThemeNeeded = false;
             }
             if(isDarkDesktop() && darculaThemeNeeded) {
@@ -509,7 +509,7 @@ public class SystemUtilities {
             return 1;
         }
         // Linux on JDK11 requires JNA calls to Gdk
-        return UbuntuUtilities.getScaleFactor();
+        return LinuxUtilities.getScaleFactor();
     }
 
     /**
@@ -528,7 +528,7 @@ public class SystemUtilities {
             return WindowsUtilities.getScaleFactor() > 1;
         }
         // Fallback to a JNA Gdk technique
-        return UbuntuUtilities.getScaleFactor() > 1;
+        return LinuxUtilities.getScaleFactor() > 1;
     }
 
     /**
@@ -726,6 +726,28 @@ public class SystemUtilities {
             return challenge == calculateChallenge();
         } catch(Exception ignore) {
             log.warn("An exception occurred validating challenge: {}", message, ignore);
+        }
+        return false;
+    }
+
+    /**
+     * Cross-platform SystemTray detector
+     */
+    public static boolean isSystemTraySupported(boolean headless) {
+        if(!headless) {
+            switch(getOsType()) {
+                case WINDOWS:
+                    if(WindowsUtilities.isHiddenSystemTray()) {
+                        return false;
+                    }
+                    break;
+                case MAC:
+                    break;
+                default:
+                    // Linux System Tray support is abysmal, always use TaskbarTrayIcon
+                    return false;
+            }
+            return SystemTray.isSupported();
         }
         return false;
     }
