@@ -37,7 +37,7 @@ import static java.nio.file.attribute.AclEntryFlag.*;
 public class WindowsUtilities {
     protected static final Logger log = LogManager.getLogger(WindowsUtilities.class);
     private static String THEME_REG_KEY = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
-    private static String SPOOLER_REG_KEY = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Print\\Printers";
+    private static String SPOOLER_REG_KEY = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Print\\Printers";
     private static String TRAY_REG_CHEVRON_KEY = "Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\TrayNotify";
     private static String TRAY_REG_POLICY_KEY = "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer";
     private static final String AUTHENTICATED_USERS_SID = "S-1-5-11";
