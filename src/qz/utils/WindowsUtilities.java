@@ -111,7 +111,7 @@ public class WindowsUtilities {
             regValue = defaultSpoolerLocation;
         }
         Path spoolerLocation = Paths.get(regValue);
-        if (regValue == null || regValue.isEmpty() || !Files.exists(spoolerLocation)) throw new FileNotFoundException("Failed to locate spooler output.");
+        if (regValue == null || regValue.isEmpty() || !Files.isDirectory(spoolerLocation)) throw new FileNotFoundException("Failed to locate spooler output.");
         printerSpoolerLocations.put(printerName, spoolerLocation);
         return spoolerLocation;
     }
