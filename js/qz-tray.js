@@ -226,17 +226,14 @@ var qz = (function() {
                             _qz.websocket.pendingCalls[obj.uid] = obj.promise;
                         }
 
-                        //ensure we know how this was signed
-                        obj.signAlgorithm = _qz.security.signAlgorithm;
-
                         // track requesting monitor
                         obj.position = {
-                            x: typeof screen !== 'undefined' ? ((screen.availWidth || screen.width) / 2) + (screen.left || screen.availLeft) : 0,
-                            y: typeof screen !== 'undefined' ? ((screen.availHeight || screen.height) / 2) + (screen.top || screen.availTop) : 0
+                            x: typeof screen !== 'undefined' ? ((screen.availWidth || screen.width) / 2) + (screen.left || screen.availLeft || 0) : 0,
+                            y: typeof screen !== 'undefined' ? ((screen.availHeight || screen.height) / 2) + (screen.top || screen.availTop || 0) : 0
                         };
 
                         try {
-                            if (obj.call != undefined && obj.signature == undefined) {
+                            if (obj.call != undefined && obj.signature == undefined && _qz.security.needsSigned(obj.call)) {
                                 var signObj = {
                                     call: obj.call,
                                     params: obj.params,
@@ -255,7 +252,8 @@ var qz = (function() {
                                     return _qz.security.callSign(hashed);
                                 }).then(function(signature) {
                                     _qz.log.trace("Signature for call", signature);
-                                    obj.signature = signature;
+                                    obj.signature = signature || "";
+                                    obj.signAlgorithm = _qz.security.signAlgorithm;
 
                                     _qz.signContent = undefined;
                                     _qz.websocket.connection.send(_qz.tools.stringify(obj));
@@ -589,7 +587,25 @@ var qz = (function() {
             },
 
             /** Signing algorithm used on signatures */
-            signAlgorithm: "SHA1"
+            signAlgorithm: "SHA1",
+
+            needsSigned: function(callName) {
+                const undialoged = [
+                    "printers.getStatus",
+                    "printers.stopListening",
+                    "usb.isClaimed",
+                    "usb.closeStream",
+                    "usb.releaseDevice",
+                    "hid.stopListening",
+                    "hid.isClaimed",
+                    "hid.closeStream",
+                    "hid.releaseDevice",
+                    "file.stopListening",
+                    "getVersion"
+                ];
+
+                return callName != null && undialoged.indexOf(callName) === -1;
+            }
         },
 
 
@@ -618,7 +634,15 @@ var qz = (function() {
                 var pjson = Array.prototype.toJSON;
                 delete Array.prototype.toJSON;
 
-                var result = JSON.stringify(object);
+                function skipKeys(key, value) {
+                    if (key === "promise") {
+                        return undefined;
+                    }
+
+                    return value;
+                }
+
+                var result = JSON.stringify(object, skipKeys);
 
                 if (pjson) {
                     Array.prototype.toJSON = pjson;
@@ -2310,6 +2334,7 @@ var qz = (function() {
              * @param {Object} [params] Object containing file access parameters
              *  @param {boolean} [params.sandbox=true] If relative location from root is only available to the certificate's connection, otherwise all connections
              *  @param {boolean} [params.shared=true] If relative location from root is accessible to all users on the system, otherwise just the current user
+             *  @param {string} [params.flavor='plain'] Flavor of data format used, valid flavors are <code>[base64 | hex | plain]</code>.
              * @returns {Promise<String|Error>} String containing the file contents
              *
              * @memberof qz.file
