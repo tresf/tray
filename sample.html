@@ -2943,8 +2943,9 @@
             var jobData;
             var dataLevel;
             if(!streamEvent.data) {
-                // This should never happen
-                jobData = "&lt;No data received&gt;";
+                // Most commonly a permissions issue reading C:\Windows\system32\spool\PRINTERS\<jobId>
+                // A custom spool location can be set using HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Print\Printers\DefaultSpoolDirectory
+                jobData = "&lt;No data received, this may be a permissions issue&gt;";
                 dataLevel = "FATAL";
             } else {
                 // Only show the first 64 characters (for display purposes)
