@@ -4,11 +4,13 @@ import com.sun.jna.platform.win32.Winspool;
 import com.sun.jna.platform.win32.WinspoolUtil;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.eclipse.jetty.util.MultiMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import qz.printer.PrintServiceMatcher;
 import qz.printer.info.NativePrinterMap;
+import qz.utils.PrintingUtilities;
 import qz.utils.SystemUtilities;
 import qz.ws.SocketConnection;
 
@@ -72,9 +74,13 @@ public class StatusMonitor {
         }
     }
 
-    public synchronized static boolean startListening(SocketConnection connection, JSONArray printerNames, boolean jobData, int maxJobData) throws JSONException {
+    public synchronized static boolean startListening(SocketConnection connection, JSONObject params) throws JSONException {
+        JSONArray printerNames = params.getJSONArray("printerNames");
+        boolean jobData = params.optBoolean("jobData", false);
+        int maxJobData = params.optInt("maxJobData", -1);
+        PrintingUtilities.Flavor dataFlavor = PrintingUtilities.Flavor.valueOf(params.optString("flavor", "PLAIN").toUpperCase(Locale.ENGLISH));
         if (printerNames.isNull(0)) {  //listen to all printers
-            if (jobData) connection.getStatusListener().enableJobDataOnPrinter(ALL_PRINTERS, maxJobData);
+            if (jobData) connection.getStatusListener().enableJobDataOnPrinter(ALL_PRINTERS, maxJobData, dataFlavor);
             if (!clientPrinterConnections.containsKey(ALL_PRINTERS)) {
                 clientPrinterConnections.add(ALL_PRINTERS, connection);
             } else if (!clientPrinterConnections.getValues(ALL_PRINTERS).contains(connection)) {
@@ -97,7 +103,7 @@ public class StatusMonitor {
                 if (printerName == null || printerName.equals("")) {
                     throw new IllegalArgumentException();
                 }
-                if(jobData) connection.getStatusListener().enableJobDataOnPrinter(printerName, maxJobData);
+                if(jobData) connection.getStatusListener().enableJobDataOnPrinter(printerName, maxJobData, dataFlavor);
                 if (!clientPrinterConnections.containsKey(printerName)) {
                     clientPrinterConnections.add(printerName, connection);
                 } else if (!clientPrinterConnections.getValues(printerName).contains(connection)) {

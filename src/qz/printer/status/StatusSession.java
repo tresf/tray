@@ -6,6 +6,7 @@ import org.eclipse.jetty.websocket.api.Session;
 import qz.App;
 import qz.printer.status.job.WmiJobStatusMap;
 import qz.utils.PrefsSearch;
+import qz.utils.PrintingUtilities;
 import qz.utils.SystemUtilities;
 import qz.utils.WindowsUtilities;
 import qz.ws.PrintSocketClient;
@@ -28,9 +29,11 @@ public class StatusSession {
     private class Spooler {
         public Path path;
         public int maxJobData;
-        public Spooler(Path path, int maxJobData) {
+        public PrintingUtilities.Flavor dataFlavor;
+        public Spooler(Path path, int maxJobData, PrintingUtilities.Flavor dataFlavor) {
             this.path = path;
             this.maxJobData = maxJobData;
+            this.dataFlavor = dataFlavor;
         }
     }
 
@@ -46,7 +49,7 @@ public class StatusSession {
         }
     }
 
-    public void enableJobDataOnPrinter(String printer, int maxJobData) throws UnsupportedOperationException {
+    public void enableJobDataOnPrinter(String printer, int maxJobData, PrintingUtilities.Flavor dataFlavor) throws UnsupportedOperationException {
         if (!SystemUtilities.isWindows()) {
             throw new UnsupportedOperationException("Job data listeners are only supported on Windows");
         }
@@ -58,7 +61,7 @@ public class StatusSession {
             printerSpoolerMap.get(printer).maxJobData = maxJobData;
         } else {
             // Lookup spooler path lazily
-            printerSpoolerMap.put(printer, new Spooler(null, maxJobData));
+            printerSpoolerMap.put(printer, new Spooler(null, maxJobData, dataFlavor));
         }
         if (printer.equals(ALL_PRINTERS)) setAllPrintersMaxJobData(maxJobData);
     }
@@ -106,9 +109,8 @@ public class StatusSession {
     private String getJobData(int jobId, String printer) {
         String data = null;
         try {
-            //todo maybe if the spooler location cant be found, this exception should make it to the client. Note, an exception would be thrown for each status
             if (!printerSpoolerMap.containsKey(printer)) {
-                printerSpoolerMap.put(printer, new Spooler(null, getAllPrintersMaxJobData()));
+                printerSpoolerMap.put(printer, new Spooler(null, getAllPrintersMaxJobData(), PrintingUtilities.Flavor.PLAIN));
             }
             Spooler spooler = printerSpoolerMap.get(printer);
             if (spooler.path == null) spooler.path = WindowsUtilities.getSpoolerLocation(printer);

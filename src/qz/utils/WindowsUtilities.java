@@ -160,8 +160,7 @@ public class WindowsUtilities {
     }
 
     public static Path getSpoolerLocation(String printerName) throws FileNotFoundException {
-        //todo do we need to worry about encoding?
-        //todo if the spooler restarts, the locations could change. detect spooler restart?
+        // TODO: If the spooler restarts, the spooler location could change, detect spooler restart
         if (printerSpoolerLocations.containsKey(printerName)) return printerSpoolerLocations.get(printerName);
 
         String regValue = getRegString(HKEY_LOCAL_MACHINE, SPOOLER_REG_KEY + printerName, "SpoolDirectory");
