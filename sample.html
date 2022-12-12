@@ -2940,8 +2940,21 @@
     function addPrintersLog(streamEvent) {
         var msg;
         if (streamEvent.eventType == "JOB_DATA") {
+            var jobData;
+            var dataLevel;
+            if(!streamEvent.data) {
+                // This should never happen
+                jobData = "&lt;No data received&gt;";
+                dataLevel = "FATAL";
+            } else {
+                // Only show the first 64 characters (for display purposes)
+                var DISPLAY_LEN = 64;
+                jobData = streamEvent.data.substring(0, DISPLAY_LEN) + (streamEvent.data.length > DISPLAY_LEN ? "..." : "");
+                dataLevel = "INFO";
+            }
             var icon = '<span class="fa fa-file-o"></span>&nbsp;';
-            msg = '<p class="INFO text-nowrap">' + icon + new Date().toString() + ": JOB DATA: " + streamEvent.data.substring(0, 64) + "...</p>";
+            msg = '<p class="' + dataLevel + '" text-nowrap">' + icon + new Date().toString() + ": JOB DATA: " + jobData + "</p>";
+
         } else {
             var icon = '<span class="fa ' + (streamEvent.eventType == 'JOB' ? 'fa-exchange' : 'fa-print') + '"></span>&nbsp;';
             msg = '<p class="' + (streamEvent.severity || "") + ' text-nowrap">' + icon + new Date().toString() + ": " + streamEvent.message + "</p>";
