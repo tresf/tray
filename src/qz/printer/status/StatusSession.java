@@ -25,7 +25,7 @@ public class StatusSession {
 
     private static final String ALL_PRINTERS = "";
 
-    private class Spooler{
+    private class Spooler {
         public Path path;
         public int maxJobData;
         public Spooler(Path path, int maxJobData) {
