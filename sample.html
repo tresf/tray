@@ -1142,6 +1142,25 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <div class="form-group form-inline">
+                                        <label>
+                                            Job Data Type
+                                        </label>
+                                        <div class="btn-group pull-right" id="jobDataRadio" data-toggle="buttons">
+                                            <label id="jobDataPlain" class="btn btn-default active">
+                                                <input type="radio" name="jobDataRadio" value="Plain" class="toggle" autocomplete="off" checked>
+                                                Plain</label>
+                                            </label>
+                                            <label id="jobDataHex" class="btn btn-default">
+                                                <input type="radio" name="jobDataRadio" value="Hex" class="toggle" autocomplete="off">
+                                                Hex</label>
+                                            </label>
+                                            <label id="jobDataBase64" class="btn btn-default">
+                                                <input type="radio" name="jobDataRadio" value="XML" class="toggle" autocomplete="off">
+                                                Base64</label>
+                                            </label>
+                                        </div>
+                                    </div>
                                     <hr />
                                     <legend>Event Log</legend>
                                     <div class="row">
@@ -2391,6 +2410,7 @@
     /// Status ///
     function startPrintersListen(printerName) {
         var jobData = $("#jobData").prop("checked");
+        var jobDataFlavor = $('input[name="jobDataRadio"]:checked').val();
         var maxJobData = $("#maxJobData").val();
         if (printerName === "NONE") {
             return displayMessage("Please search for a valid printer first", "alert-warning");
@@ -2399,7 +2419,8 @@
             clearPrintersLog();
             var params = {
                 jobData: jobData,
-                maxJobData: maxJobData
+                maxJobData: maxJobData,
+                flavor: jobDataFlavor
             };
             return qz.printers.startListening(printerName, params);
         }).then(function() {

@@ -9,13 +9,12 @@
  */
 package qz.utils;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import qz.common.ByteArrayBuilder;
 import qz.common.Constants;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 /**
  * Place for all raw static byte conversion functions.
@@ -26,6 +25,7 @@ import java.util.Locale;
  * @author Tres Finocchiaro
  */
 public class ByteUtilities {
+    private static final Logger log = LogManager.getLogger(ByteUtilities.class);
 
     public enum Endian {
         BIG, LITTLE
@@ -64,6 +64,29 @@ public class ByteUtilities {
         }
 
         return data;
+    }
+
+    public static String encodeBytes(byte[] bytes, PrintingUtilities.Flavor flavor) {
+        switch(flavor) {
+            case BASE64:
+                return bytesToBase64(bytes);
+            case HEX:
+                return bytesToHex(bytes);
+            case PLAIN:
+                return new String(bytes);
+            default:
+                log.warn("Cannot encode byte array as " + flavor.name());
+                return new String(bytes);
+        }
+    }
+
+    /**
+     * Converts an array of bytes to its base64 form.
+     *
+     * @param bytes     Bytes to be converted.
+     */
+    public static String bytesToBase64(byte[] bytes) {
+        return Base64.getEncoder().encodeToString(bytes);
     }
 
     public static String bytesToHex(byte[] bytes) {

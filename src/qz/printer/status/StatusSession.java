@@ -5,10 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.websocket.api.Session;
 import qz.App;
 import qz.printer.status.job.WmiJobStatusMap;
-import qz.utils.PrefsSearch;
-import qz.utils.PrintingUtilities;
-import qz.utils.SystemUtilities;
-import qz.utils.WindowsUtilities;
+import qz.utils.*;
 import qz.ws.PrintSocketClient;
 import qz.ws.StreamEvent;
 
@@ -79,6 +76,13 @@ public class StatusSession {
         return -1;
     }
 
+    private PrintingUtilities.Flavor getAllPrintersDataFlavor() {
+        if (printerSpoolerMap.containsKey(ALL_PRINTERS)) {
+            return printerSpoolerMap.get(ALL_PRINTERS).dataFlavor;
+        }
+        return PrintingUtilities.Flavor.PLAIN;
+    }
+
     private StreamEvent createJobDataStream(Status status) {
         StreamEvent streamEvent = new StreamEvent(StreamEvent.Stream.PRINTER, StreamEvent.Type.ACTION)
                 .withData("printerName", status.sanitizePrinterName())
@@ -110,14 +114,14 @@ public class StatusSession {
         String data = null;
         try {
             if (!printerSpoolerMap.containsKey(printer)) {
-                printerSpoolerMap.put(printer, new Spooler(null, getAllPrintersMaxJobData(), PrintingUtilities.Flavor.PLAIN));
+                printerSpoolerMap.put(printer, new Spooler(null, getAllPrintersMaxJobData(), getAllPrintersDataFlavor()));
             }
             Spooler spooler = printerSpoolerMap.get(printer);
             if (spooler.path == null) spooler.path = WindowsUtilities.getSpoolerLocation(printer);
             if (spooler.maxJobData != -1 && Files.size(spooler.path) > spooler.maxJobData) {
                 throw new IOException("File too large, omitting result. Size:" + Files.size(spooler.path) + " MaxJobData:" + spooler.maxJobData);
             }
-            data = new String(Files.readAllBytes(spooler.path.resolve(String.format("%05d", jobId) + ".SPL")));
+            data = ByteUtilities.encodeBytes(Files.readAllBytes(spooler.path.resolve(String.format("%05d", jobId) + ".SPL")), spooler.dataFlavor);
         }
         catch(IOException e) {
             log.error("Failed to retrieve job data from job #{}", jobId, e);

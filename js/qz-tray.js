@@ -1296,6 +1296,7 @@ var qz = (function() {
                 };
                 if (options && options.jobData == true) params.jobData = true;
                 if (options && options.maxJobData) params.maxJobData = options.maxJobData;
+                if (options && options.flavor) params.flavor = options.flavor;
                 return _qz.websocket.dataPromise('printers.startListening', params);
             },
 

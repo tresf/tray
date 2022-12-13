@@ -78,7 +78,13 @@ public class StatusMonitor {
         JSONArray printerNames = params.getJSONArray("printerNames");
         boolean jobData = params.optBoolean("jobData", false);
         int maxJobData = params.optInt("maxJobData", -1);
-        PrintingUtilities.Flavor dataFlavor = PrintingUtilities.Flavor.valueOf(params.optString("flavor", "PLAIN").toUpperCase(Locale.ENGLISH));
+        PrintingUtilities.Flavor dataFlavor;
+        try {
+            dataFlavor = PrintingUtilities.Flavor.valueOf(params.optString("flavor", "PLAIN").toUpperCase(Locale.ENGLISH));
+        } catch(Exception ignore) {
+            log.warn("Unknown data flavor, assuming plain");
+            dataFlavor = PrintingUtilities.Flavor.PLAIN;
+        }
         if (printerNames.isNull(0)) {  //listen to all printers
             if (jobData) connection.getStatusListener().enableJobDataOnPrinter(ALL_PRINTERS, maxJobData, dataFlavor);
             if (!clientPrinterConnections.containsKey(ALL_PRINTERS)) {
