@@ -69,12 +69,11 @@ public class StatusSession {
             // Lookup spooler path lazily
             printerSpoolerMap.put(printer, new Spooler(null, maxJobData, dataFlavor));
         }
-        if (printer.equals(ALL_PRINTERS)) setAllPrintersMaxJobData(maxJobData);
-    }
-
-    private void setAllPrintersMaxJobData(int maxBytes) {
-        for(Map.Entry<String, Spooler> entry : printerSpoolerMap.entrySet()) {
-            entry.getValue().maxJobData = maxBytes;
+        if (printer.equals(ALL_PRINTERS)) {
+            // If we have started job-data listening on all printer, the new parameters need to be added to all existing printers
+            for(Map.Entry<String, Spooler> entry : printerSpoolerMap.entrySet()) {
+                entry.getValue().maxJobData = maxJobData;
+            }
         }
     }
 
