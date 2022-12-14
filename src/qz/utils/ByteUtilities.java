@@ -9,6 +9,7 @@
  */
 package qz.utils;
 
+import org.apache.commons.ssl.Base64;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import qz.common.ByteArrayBuilder;
@@ -66,27 +67,18 @@ public class ByteUtilities {
         return data;
     }
 
-    public static String encodeBytes(byte[] bytes, PrintingUtilities.Flavor flavor) {
+    public static String toString(PrintingUtilities.Flavor flavor, byte[] bytes) {
         switch(flavor) {
             case BASE64:
-                return bytesToBase64(bytes);
+                return Base64.encodeBase64String(bytes);
             case HEX:
-                return bytesToHex(bytes);
+                return ByteUtilities.bytesToHex(bytes);
             case PLAIN:
-                return new String(bytes);
+                // deliberate fallthrough
             default:
-                log.warn("Cannot encode byte array as " + flavor.name());
-                return new String(bytes);
+                log.warn("ByteUtilities.toString(...) does not support {}, defaulting to {}", PrintingUtilities.Flavor.FILE, PrintingUtilities.Flavor.PLAIN);
         }
-    }
-
-    /**
-     * Converts an array of bytes to its base64 form.
-     *
-     * @param bytes     Bytes to be converted.
-     */
-    public static String bytesToBase64(byte[] bytes) {
-        return Base64.getEncoder().encodeToString(bytes);
+        return new String(bytes);
     }
 
     public static String bytesToHex(byte[] bytes) {

@@ -80,7 +80,7 @@ public class StatusMonitor {
         int maxJobData = params.optInt("maxJobData", -1);
         PrintingUtilities.Flavor dataFlavor;
         try {
-            dataFlavor = PrintingUtilities.Flavor.valueOf(params.optString("flavor", "PLAIN").toUpperCase(Locale.ENGLISH));
+            dataFlavor = PrintingUtilities.Flavor.parse(params, PrintingUtilities.Flavor.PLAIN);
         } catch(Exception ignore) {
             log.warn("Unknown data flavor, assuming plain");
             dataFlavor = PrintingUtilities.Flavor.PLAIN;

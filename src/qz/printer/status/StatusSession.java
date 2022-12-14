@@ -121,7 +121,7 @@ public class StatusSession {
             if (spooler.maxJobData != -1 && Files.size(spooler.path) > spooler.maxJobData) {
                 throw new IOException("File too large, omitting result. Size:" + Files.size(spooler.path) + " MaxJobData:" + spooler.maxJobData);
             }
-            data = ByteUtilities.encodeBytes(Files.readAllBytes(spooler.path.resolve(String.format("%05d", jobId) + ".SPL")), spooler.dataFlavor);
+            data = spooler.dataFlavor.toString(Files.readAllBytes(spooler.path.resolve(String.format("%05d", jobId) + ".SPL")));
         }
         catch(IOException e) {
             log.error("Failed to retrieve job data from job #{}", jobId, e);
