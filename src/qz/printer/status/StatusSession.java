@@ -22,14 +22,24 @@ public class StatusSession {
     private Session session;
     private HashMap<String, Spooler> printerSpoolerMap = new HashMap<>();
 
-    private class Spooler {
+    private class Spooler implements Cloneable {
         public Path path;
         public int maxJobData;
         public PrintingUtilities.Flavor dataFlavor;
+
+        public Spooler() {
+            this(null, -1, PrintingUtilities.Flavor.PLAIN);
+        }
+
         public Spooler(Path path, int maxJobData, PrintingUtilities.Flavor dataFlavor) {
             this.path = path;
             this.maxJobData = maxJobData;
             this.dataFlavor = dataFlavor;
+        }
+
+        @Override
+        public Spooler clone() {
+            return new Spooler(path, maxJobData, dataFlavor);
         }
     }
 
@@ -66,13 +76,6 @@ public class StatusSession {
         for(Map.Entry<String, Spooler> entry : printerSpoolerMap.entrySet()) {
             entry.getValue().maxJobData = maxBytes;
         }
-    }
-
-    private int getAllPrintersMaxJobData() {
-        if (printerSpoolerMap.containsKey(ALL_PRINTERS)) {
-            return printerSpoolerMap.get(ALL_PRINTERS).maxJobData;
-        }
-        return -1;
     }
 
     private PrintingUtilities.Flavor getAllPrintersDataFlavor() {
@@ -113,8 +116,15 @@ public class StatusSession {
         String data = null;
         try {
             if (!printerSpoolerMap.containsKey(printer)) {
-                printerSpoolerMap.put(printer, new Spooler(null, getAllPrintersMaxJobData(), getAllPrintersDataFlavor()));
+            // If not listening on this printer, assume we're listening on ALL_PRINTERS
+            Spooler spooler;
+            if(printerSpoolerMap.containsKey(ALL_PRINTERS)) {
+                spooler = printerSpoolerMap.get(ALL_PRINTERS).clone();
+            } else {
+                // we should never get here
+                spooler = new Spooler();
             }
+            printerSpoolerMap.put(printer, spooler);            }
             Spooler spooler = printerSpoolerMap.get(printer);
             if (spooler.path == null) spooler.path = WindowsUtilities.getSpoolerLocation(printer);
             if (spooler.maxJobData != -1 && Files.size(spooler.path) > spooler.maxJobData) {
