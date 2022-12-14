@@ -84,7 +84,9 @@ public class StatusMonitor {
             if (jobData) {
                 connection.getStatusListener().enableJobDataOnPrinter(ALL_PRINTERS, maxJobData, dataFlavor);
             }
-            if (!clientPrinterConnections.get(ALL_PRINTERS).contains(connection)) {
+            if (!clientPrinterConnections.containsKey(ALL_PRINTERS)) {
+                clientPrinterConnections.add(ALL_PRINTERS, connection);
+            } else if (!clientPrinterConnections.getValues(ALL_PRINTERS).contains(connection)) {
                 clientPrinterConnections.add(ALL_PRINTERS, connection);
             }
         } else {  // listen to specific printer(s)
@@ -100,13 +102,15 @@ public class StatusMonitor {
                         printerName = NativePrinterMap.getInstance().lookupPrinterId(printerNames.getString(i));
                     }
                 }
-                if (printerName == null || printerName.equals(ALL_PRINTERS)) {
+                if (printerName == null || printerName.equals("")) {
                     throw new IllegalArgumentException();
                 }
                 if(jobData) {
                     connection.getStatusListener().enableJobDataOnPrinter(printerName, maxJobData, dataFlavor);
                 }
-                if (!clientPrinterConnections.get(printerName).contains(connection)) {
+                if (!clientPrinterConnections.containsKey(printerName)) {
+                    clientPrinterConnections.add(printerName, connection);
+                } else if (!clientPrinterConnections.getValues(printerName).contains(connection)) {
                     clientPrinterConnections.add(printerName, connection);
                 }
             }
