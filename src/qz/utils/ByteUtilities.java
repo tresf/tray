@@ -74,7 +74,7 @@ public class ByteUtilities {
             case HEX:
                 return ByteUtilities.bytesToHex(bytes);
             case PLAIN:
-                // deliberate fallthrough
+                break;
             default:
                 log.warn("ByteUtilities.toString(...) does not support {}, defaulting to {}", PrintingUtilities.Flavor.FILE, PrintingUtilities.Flavor.PLAIN);
         }
