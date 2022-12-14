@@ -78,13 +78,6 @@ public class StatusSession {
         }
     }
 
-    private PrintingUtilities.Flavor getAllPrintersDataFlavor() {
-        if (printerSpoolerMap.containsKey(ALL_PRINTERS)) {
-            return printerSpoolerMap.get(ALL_PRINTERS).dataFlavor;
-        }
-        return PrintingUtilities.Flavor.PLAIN;
-    }
-
     private StreamEvent createJobDataStream(Status status) {
         StreamEvent streamEvent = new StreamEvent(StreamEvent.Stream.PRINTER, StreamEvent.Type.ACTION)
                 .withData("printerName", status.sanitizePrinterName())
