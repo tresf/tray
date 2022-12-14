@@ -109,15 +109,16 @@ public class StatusSession {
         String data = null;
         try {
             if (!printerSpoolerMap.containsKey(printer)) {
-            // If not listening on this printer, assume we're listening on ALL_PRINTERS
-            Spooler spooler;
-            if(printerSpoolerMap.containsKey(ALL_PRINTERS)) {
-                spooler = printerSpoolerMap.get(ALL_PRINTERS).clone();
-            } else {
-                // we should never get here
-                spooler = new Spooler();
+                // If not listening on this printer, assume we're listening on ALL_PRINTERS
+                Spooler spooler;
+                if(printerSpoolerMap.containsKey(ALL_PRINTERS)) {
+                    spooler = printerSpoolerMap.get(ALL_PRINTERS).clone();
+                } else {
+                    // we should never get here
+                    spooler = new Spooler();
+                }
+                printerSpoolerMap.put(printer, spooler);
             }
-            printerSpoolerMap.put(printer, spooler);            }
             Spooler spooler = printerSpoolerMap.get(printer);
             if (spooler.path == null) spooler.path = WindowsUtilities.getSpoolerLocation(printer);
             if (spooler.maxJobData != -1 && Files.size(spooler.path) > spooler.maxJobData) {
