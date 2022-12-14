@@ -20,7 +20,6 @@ import static qz.printer.status.StatusMonitor.ALL_PRINTERS;
 public class StatusSession {
     private static final Logger log = LogManager.getLogger(StatusSession.class);
     private Session session;
-    //todo investigate moving this to nativePrinter.
     private HashMap<String, Spooler> printerSpoolerMap = new HashMap<>();
 
     private class Spooler {
