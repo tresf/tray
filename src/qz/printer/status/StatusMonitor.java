@@ -24,7 +24,7 @@ import static qz.utils.SystemUtilities.isWindows;
 public class StatusMonitor {
     private static final Logger log = LogManager.getLogger(StatusMonitor.class);
 
-    private static final String ALL_PRINTERS = "";
+    public static final String ALL_PRINTERS = "";
 
     private static Thread printerConnectionsThread;
     private static final HashMap<String,Thread> notificationThreadCollection = new HashMap<>();
@@ -81,11 +81,10 @@ public class StatusMonitor {
         PrintingUtilities.Flavor dataFlavor = PrintingUtilities.Flavor.parse(params, PrintingUtilities.Flavor.PLAIN);
 
         if (printerNames.isNull(0)) {  //listen to all printers
-            if (jobData) connection.getStatusListener().enableJobDataOnPrinter(ALL_PRINTERS, maxJobData, dataFlavor);
-            if (!clientPrinterConnections.containsKey(ALL_PRINTERS)) {
-                clientPrinterConnections.add(ALL_PRINTERS, connection);
-            } else if (!clientPrinterConnections.getValues(ALL_PRINTERS).contains(connection)) {
-                //todo shouldn't this be clientPrinterConnections.getValues(ALL_PRINTERS).add(connection);
+            if (jobData) {
+                connection.getStatusListener().enableJobDataOnPrinter(ALL_PRINTERS, maxJobData, dataFlavor);
+            }
+            if (!clientPrinterConnections.get(ALL_PRINTERS).contains(connection)) {
                 clientPrinterConnections.add(ALL_PRINTERS, connection);
             }
         } else {  // listen to specific printer(s)
@@ -101,13 +100,13 @@ public class StatusMonitor {
                         printerName = NativePrinterMap.getInstance().lookupPrinterId(printerNames.getString(i));
                     }
                 }
-                if (printerName == null || printerName.equals("")) {
+                if (printerName == null || printerName.equals(ALL_PRINTERS)) {
                     throw new IllegalArgumentException();
                 }
-                if(jobData) connection.getStatusListener().enableJobDataOnPrinter(printerName, maxJobData, dataFlavor);
-                if (!clientPrinterConnections.containsKey(printerName)) {
-                    clientPrinterConnections.add(printerName, connection);
-                } else if (!clientPrinterConnections.getValues(printerName).contains(connection)) {
+                if(jobData) {
+                    connection.getStatusListener().enableJobDataOnPrinter(printerName, maxJobData, dataFlavor);
+                }
+                if (!clientPrinterConnections.get(printerName).contains(connection)) {
                     clientPrinterConnections.add(printerName, connection);
                 }
             }
@@ -125,7 +124,7 @@ public class StatusMonitor {
         boolean sendForAllPrinters = false;
         ArrayList<Status> statuses = isWindows() ? WmiPrinterStatusThread.getAllStatuses(): CupsUtils.getAllStatuses();
 
-        List<SocketConnection> connections = clientPrinterConnections.get("");
+        List<SocketConnection> connections = clientPrinterConnections.get(ALL_PRINTERS);
         if (connections != null) {
             sendForAllPrinters = connections.contains(connection);
         }
@@ -158,7 +157,7 @@ public class StatusMonitor {
     }
 
     public synchronized static boolean isListeningTo(String PrinterName) {
-        return clientPrinterConnections.containsKey(PrinterName) || clientPrinterConnections.containsKey("");
+        return clientPrinterConnections.containsKey(PrinterName) || clientPrinterConnections.containsKey(ALL_PRINTERS);
     }
 
     public synchronized static void statusChanged(Status[] statuses) {
@@ -167,8 +166,8 @@ public class StatusMonitor {
             if (clientPrinterConnections.containsKey(status.getPrinter())) {
                 connections.addAll(clientPrinterConnections.get(status.getPrinter()));
             }
-            if (clientPrinterConnections.containsKey("")) {
-                connections.addAll(clientPrinterConnections.get(""));
+            if (clientPrinterConnections.containsKey(ALL_PRINTERS)) {
+                connections.addAll(clientPrinterConnections.get(ALL_PRINTERS));
             }
             for (SocketConnection connection : connections) {
                 connection.getStatusListener().statusChanged(status);
