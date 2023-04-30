@@ -165,9 +165,11 @@ public class StatusMonitor {
     }
 
     private synchronized static void launchStatusEventDispatchThread() {
+        // Null is our main test to see if the thread needs to restart. If the thread was suspended, it won't be null, so check to see if it is alive as well.
         if (statusEventDispatchThread != null && statusEventDispatchThread.isAlive()) return;
         statusEventDispatchThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted() && dispatchStatusEvent()) {
+                // If we don't yield, this will constantly run dispatchStatusEvent and lock up the class, even though this thread isn't synchronized.
                 Thread.yield();
             }
             if (Thread.currentThread().isInterrupted()) log.warn("statusEventDispatchThread Interrupted");
@@ -177,15 +179,21 @@ public class StatusMonitor {
 
     public synchronized static void statusChanged(Status[] statuses) {
         for (Status status : statuses) {
+            // Add statuses to the queue, statusEventDispatchThread will resolve these one at a time until the queue is empty
             statusQueue.add(status);
         }
         if (!statusQueue.isEmpty()) {
+            // If statusEventDispatchThread isn't already running, launch it
             launchStatusEventDispatchThread();
         }
     }
 
+    // This is the main body of the statusEventDispatchThread.
+    // Dispatch one status event to n clients connection, based on clientPrinterConnections
+    // Returns false when there are no more statuses in the queue
     private synchronized static boolean dispatchStatusEvent() {
         if (statusQueue.isEmpty()) {
+            // Returning false will kill statusEventDispatchThread, but we also want to null out the value while we are still in a synchronized method
             statusEventDispatchThread = null;
             return false;
         }
@@ -193,9 +201,11 @@ public class StatusMonitor {
 
         HashSet<SocketConnection> listeningConnections = new HashSet<>();
         if (clientPrinterConnections.containsKey(status.getPrinter())) {
+            // Find every client that subscribed to this printer
             listeningConnections.addAll(clientPrinterConnections.get(status.getPrinter()));
         }
         if (clientPrinterConnections.containsKey(ALL_PRINTERS)) {
+            // And find every client that subscribed to all printers
             listeningConnections.addAll(clientPrinterConnections.get(ALL_PRINTERS));
         }
         for (SocketConnection connection : listeningConnections) {
