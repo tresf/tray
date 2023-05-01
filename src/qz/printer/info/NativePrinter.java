@@ -10,9 +10,11 @@ import javax.print.attribute.standard.PrinterName;
 import javax.print.attribute.standard.PrinterResolution;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class NativePrinter {
     private static final Logger log = LogManager.getLogger(NativePrinter.class);
+    private static final long nameLifespan = TimeUnit.SECONDS.toNanos(10);
     /**
      * Simple object wrapper allowing lazy fetching of values
      * @param <T>
@@ -69,6 +71,8 @@ public class NativePrinter {
     }
 
     private final String printerId;
+    private String name;
+    private long nameTimestamp = Long.MIN_VALUE;  // System.nanoTime() can be negative, set as min to guarantee first-run.
     private boolean outdated;
     private PrinterProperty<String> description;
     private PrinterProperty<PrintService> printService;
@@ -113,10 +117,17 @@ public class NativePrinter {
 
     public String getName() {
         if (printService != null && printService.value() != null) {
-            return printService.value().getName();
+            long timeStamp = System.nanoTime();
+            // getName() reaches out to native and is expensive. This name is cached, and is refreshed if nameLifespan has elapsed.
+            if (nameTimestamp + nameLifespan <= timeStamp) {
+                name = printService.value().getName();
+                nameTimestamp = timeStamp;
+            }
+            return name;
         }
         return null;
     }
+
 
     public PrinterName getLegacyName() {
         if (printService != null && printService.value() != null) {
