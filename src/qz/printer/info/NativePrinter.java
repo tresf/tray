@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 public class NativePrinter {
     private static final Logger log = LogManager.getLogger(NativePrinter.class);
-    private static final long nameLifespan = TimeUnit.SECONDS.toNanos(10);
+    private static final long nameLifespan = TimeUnit.SECONDS.toNanos(10); //Set to 0 to disable, do not set to a negative number
     /**
      * Simple object wrapper allowing lazy fetching of values
      * @param <T>
@@ -117,8 +117,10 @@ public class NativePrinter {
 
     public String getName() {
         if (printService != null && printService.value() != null) {
+            if (!SystemUtilities.isMac()) return printService.value().getName();
+
             long timeStamp = System.nanoTime();
-            // getName() reaches out to native and is expensive. This name is cached, and is refreshed if nameLifespan has elapsed.
+            // getName() reaches out to native and is expensive on mac. This name is cached, and is refreshed if nameLifespan has elapsed
             if (nameTimestamp + nameLifespan <= timeStamp) {
                 name = printService.value().getName();
                 nameTimestamp = timeStamp;

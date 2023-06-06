@@ -27,9 +27,13 @@ import javax.print.attribute.standard.MediaTray;
 import javax.print.attribute.standard.PrinterName;
 import javax.print.attribute.standard.PrinterResolution;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public class PrintServiceMatcher {
     private static final Logger log = LogManager.getLogger(PrintServiceMatcher.class);
+    private static final long cachedDefaultServiceLifespan = TimeUnit.SECONDS.toNanos(10); //Set to 0 to disable, do not set to a negative number
+    private static PrintService cachedDefaultService;
+    private static long cachedDefaultServiceTimestamp = Long.MIN_VALUE;  // System.nanoTime() can be negative, set as min to guarantee first-run.
 
     public static NativePrinterMap getNativePrinterList(boolean silent, boolean withAttributes) {
         NativePrinterMap printers = NativePrinterMap.getInstance();
@@ -48,7 +52,21 @@ public class PrintServiceMatcher {
     }
 
     public static NativePrinter getDefaultPrinter() {
-        PrintService defaultService = PrintServiceLookup.lookupDefaultPrintService();
+        PrintService defaultService;
+
+        //Todo: This is a temporary fix for slow lookupDefaultPrintService on linux
+        // An upstream fix is being pursued
+        if (SystemUtilities.isLinux()) {
+            long timeStamp = System.nanoTime();
+            // lookupDefaultPrintService() is expensive on linux. The printService is cached, and is refreshed if the lifespan has elapsed
+            if (cachedDefaultServiceTimestamp + cachedDefaultServiceLifespan <= timeStamp) {
+                cachedDefaultService = PrintServiceLookup.lookupDefaultPrintService();
+                cachedDefaultServiceTimestamp = timeStamp;
+            }
+            defaultService = cachedDefaultService;
+        } else {
+            defaultService = PrintServiceLookup.lookupDefaultPrintService();
+        }
 
         if(defaultService == null) {
             return null;
@@ -84,6 +102,8 @@ public class PrintServiceMatcher {
 
         if (!silent) { log.debug("Searching for PrintService matching {}", printerSearch); }
 
+        // Fix for https://github.com/qzind/tray/issues/931
+        // This is more than an optimization, removal will lead to a regression
         NativePrinter defaultPrinter = getDefaultPrinter();
         if (defaultPrinter != null && printerSearch.equals(defaultPrinter.getName())) {
             if (!silent) { log.debug("Matched default printer, skipping further search"); }
@@ -149,7 +169,8 @@ public class PrintServiceMatcher {
         return use;
     }
 
-    public static NativePrinter matchPrinter(String printerSearch) {
+    public static NativePrinter
+    matchPrinter(String printerSearch) {
         return matchPrinter(printerSearch, false);
     }
 
