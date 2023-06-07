@@ -54,11 +54,11 @@ public class PrintServiceMatcher {
     public static NativePrinter getDefaultPrinter() {
         PrintService defaultService;
 
-        //Todo: This is a temporary fix for slow lookupDefaultPrintService on linux
+        //Todo: This is a temporary fix for slow lookupDefaultPrintService on mac/linux
         // An upstream fix is being pursued
-        if (SystemUtilities.isLinux()) {
+        if (!SystemUtilities.isWindows()) {
             long timeStamp = System.nanoTime();
-            // lookupDefaultPrintService() is expensive on linux. The printService is cached, and is refreshed if the lifespan has elapsed
+            // lookupDefaultPrintService() is expensive on mac/linux. The printService is cached, and is refreshed if the lifespan has elapsed
             if (cachedDefaultServiceTimestamp + cachedDefaultServiceLifespan <= timeStamp) {
                 cachedDefaultService = PrintServiceLookup.lookupDefaultPrintService();
                 cachedDefaultServiceTimestamp = timeStamp;
