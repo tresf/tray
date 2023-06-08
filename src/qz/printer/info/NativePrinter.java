@@ -2,6 +2,7 @@ package qz.printer.info;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import qz.common.CachedObject;
 import qz.utils.SystemUtilities;
 
 import javax.print.PrintService;
@@ -10,11 +11,9 @@ import javax.print.attribute.standard.PrinterName;
 import javax.print.attribute.standard.PrinterResolution;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class NativePrinter {
     private static final Logger log = LogManager.getLogger(NativePrinter.class);
-    private static final long nameLifespan = TimeUnit.SECONDS.toNanos(10); //Set to 0 to disable, do not set to a negative number
     /**
      * Simple object wrapper allowing lazy fetching of values
      * @param <T>
@@ -71,8 +70,11 @@ public class NativePrinter {
     }
 
     private final String printerId;
-    private String name;
-    private long nameTimestamp = Long.MIN_VALUE;  // System.nanoTime() can be negative, set as min to guarantee first-run.
+
+    // getName() reaches out to native and is expensive on mac. This name is cached, and is refreshed if lifespan has elapsed
+    // todo Fix before merging: mention upsteam bug report
+    private final long lifespan = SystemUtilities.isMac() ? CachedObject.DEFAULT_LIFESPAN : 0;
+    private CachedObject<String> cachedName = new CachedObject<>(this::getNameNative, lifespan);
     private boolean outdated;
     private PrinterProperty<String> description;
     private PrinterProperty<PrintService> printService;
@@ -116,16 +118,12 @@ public class NativePrinter {
     }
 
     public String getName() {
-        if (printService != null && printService.value() != null) {
-            if (!SystemUtilities.isMac()) return printService.value().getName();
+        return cachedName.get();
+    }
 
-            long timeStamp = System.nanoTime();
-            // getName() reaches out to native and is expensive on mac. This name is cached, and is refreshed if nameLifespan has elapsed
-            if (nameTimestamp + nameLifespan <= timeStamp) {
-                name = printService.value().getName();
-                nameTimestamp = timeStamp;
-            }
-            return name;
+    private String getNameNative() {
+        if (printService != null && printService.value() != null) {
+            return printService.value().getName();
         }
         return null;
     }

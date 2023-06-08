@@ -15,6 +15,7 @@ import org.apache.logging.log4j.Logger;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import qz.common.CachedObject;
 import qz.printer.info.NativePrinter;
 import qz.printer.info.NativePrinterMap;
 import qz.utils.SystemUtilities;
@@ -27,13 +28,14 @@ import javax.print.attribute.standard.MediaTray;
 import javax.print.attribute.standard.PrinterName;
 import javax.print.attribute.standard.PrinterResolution;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
 public class PrintServiceMatcher {
     private static final Logger log = LogManager.getLogger(PrintServiceMatcher.class);
-    private static final long cachedDefaultServiceLifespan = TimeUnit.SECONDS.toNanos(10); //Set to 0 to disable, do not set to a negative number
-    private static PrintService cachedDefaultService;
-    private static long cachedDefaultServiceTimestamp = Long.MIN_VALUE;  // System.nanoTime() can be negative, set as min to guarantee first-run.
+
+    // lookupDefaultPrintService() reaches out to native and is expensive on mac/linux. This printService is cached, and refreshed if lifespan has elapsed
+    // todo Fix before merging: mention upsteam bug report
+    private static final long lifespan = SystemUtilities.isWindows() ? 0 : CachedObject.DEFAULT_LIFESPAN;
+    private static CachedObject<PrintService> cachedDefault = new CachedObject<>(PrintServiceLookup::lookupDefaultPrintService, lifespan);
 
     public static NativePrinterMap getNativePrinterList(boolean silent, boolean withAttributes) {
         NativePrinterMap printers = NativePrinterMap.getInstance();
@@ -52,21 +54,7 @@ public class PrintServiceMatcher {
     }
 
     public static NativePrinter getDefaultPrinter() {
-        PrintService defaultService;
-
-        //Todo: This is a temporary fix for slow lookupDefaultPrintService on mac/linux
-        // An upstream fix is being pursued
-        if (!SystemUtilities.isWindows()) {
-            long timeStamp = System.nanoTime();
-            // lookupDefaultPrintService() is expensive on mac/linux. The printService is cached, and is refreshed if the lifespan has elapsed
-            if (cachedDefaultServiceTimestamp + cachedDefaultServiceLifespan <= timeStamp) {
-                cachedDefaultService = PrintServiceLookup.lookupDefaultPrintService();
-                cachedDefaultServiceTimestamp = timeStamp;
-            }
-            defaultService = cachedDefaultService;
-        } else {
-            defaultService = PrintServiceLookup.lookupDefaultPrintService();
-        }
+        PrintService defaultService = cachedDefault.get();
 
         if(defaultService == null) {
             return null;
