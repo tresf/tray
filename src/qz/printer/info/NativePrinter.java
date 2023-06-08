@@ -128,7 +128,6 @@ public class NativePrinter {
         return null;
     }
 
-
     public PrinterName getLegacyName() {
         if (printService != null && printService.value() != null) {
             return printService.value().getAttribute(PrinterName.class);
