@@ -53,8 +53,7 @@ public class CachedObject<T> {
      * @param milliseconds The lifespan of the cached object in milliseconds
      */
     public void setLifespan(long milliseconds) {
-        // we never want lifespan to be negative, since timestamp initializes as long.MIN_VALUE
-        lifespan = Math.max(0, milliseconds);
+        lifespan = Math.max(0, milliseconds); // prevent overflow
     }
 
     /**
