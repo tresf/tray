@@ -11,8 +11,8 @@ import java.util.function.Supplier;
  * @param <T> The type of object to be cached.
  */
 public class CachedObject<T> {
-    public static final long DEFAULT_LIFESPAN = 5000;
-    T cachedObject;
+    public static final long DEFAULT_LIFESPAN = 5000; // in milliseconds
+    T lastObject;
     Supplier<T> supplier;
     private long timestamp;
     private long lifespan;
@@ -59,7 +59,7 @@ public class CachedObject<T> {
 
     /**
      * Retrieves the cached object.
-     * If the cached object's lifespan is expired, it gets refreshed before being returned.
+     * If the cached object's lifespan has expired, it gets refreshed before being returned.
      *
      * @return The cached object
      */
@@ -79,9 +79,9 @@ public class CachedObject<T> {
         // check lifespan
         if (forceRefresh || (timestamp + lifespan <= now)) {
             timestamp = now;
-            cachedObject = supplier.get();
+            lastObject = supplier.get();
         }
-        return cachedObject;
+        return lastObject;
     }
 
     // Test

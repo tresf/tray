@@ -32,7 +32,7 @@ import java.util.Locale;
 public class PrintServiceMatcher {
     private static final Logger log = LogManager.getLogger(PrintServiceMatcher.class);
 
-    // lookupDefaultPrintService() reaches out to native and is expensive on mac/linux. This printService is cached, and refreshed if lifespan has elapsed
+    // PrintServiceLookup.lookupDefaultPrintService() is slow, use a cache instead per JDK-XXXXXXX
     // todo Fix before merging: mention upsteam bug report
     private static final long lifespan = SystemUtilities.isWindows() ? 0 : CachedObject.DEFAULT_LIFESPAN;
     private static CachedObject<PrintService> cachedDefault = new CachedObject<>(PrintServiceLookup::lookupDefaultPrintService, lifespan);

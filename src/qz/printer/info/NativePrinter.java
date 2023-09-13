@@ -71,8 +71,8 @@ public class NativePrinter {
 
     private final String printerId;
 
-    // getName() reaches out to native and is expensive on mac. This name is cached, and is refreshed if lifespan has elapsed
-    // todo Fix before merging: mention upsteam bug report
+    // PrintService.getName() is slow, use a cache instead per JDK-XXXXXXX
+    // TODO: Remove this comment when upstream bug report is filed
     private final long lifespan = SystemUtilities.isMac() ? CachedObject.DEFAULT_LIFESPAN : 0;
     private CachedObject<String> cachedName = new CachedObject<>(this::getNameNative, lifespan);
     private boolean outdated;
