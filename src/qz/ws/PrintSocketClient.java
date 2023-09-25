@@ -276,11 +276,14 @@ public class PrintSocketClient {
                 sendResult(session, UID, PrintServiceMatcher.getPrintersJSON(true));
                 break;
             case PRINTERS_START_LISTENING:
-                StatusMonitor.startListening(connection, session, params);
+                if (!connection.hasStatusListener()) {
+                    connection.startStatusListener(new StatusSession(session));
+                }
+                StatusMonitor.startListening(connection, params);
                 sendResult(session, UID, null);
                 break;
             case PRINTERS_GET_STATUS:
-                if (StatusMonitor.isListening(connection)) {
+                if (connection.hasStatusListener()) {
                     StatusMonitor.sendStatuses(connection);
                 } else {
                     sendError(session, UID, "No printer listeners started for this client.");
@@ -288,7 +291,9 @@ public class PrintSocketClient {
                 sendResult(session, UID, null);
                 break;
             case PRINTERS_STOP_LISTENING:
-                StatusMonitor.stopListening(connection);
+                if (connection.hasStatusListener()) {
+                    connection.stopStatusListener();
+                }
                 sendResult(session, UID, null);
                 break;
             case PRINT:
