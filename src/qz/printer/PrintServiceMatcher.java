@@ -21,6 +21,7 @@ import qz.printer.info.NativePrinterMap;
 import qz.utils.SystemUtilities;
 
 import javax.print.PrintService;
+import javax.print.PrintServiceLookup;
 import javax.print.attribute.ResolutionSyntax;
 import javax.print.attribute.standard.Media;
 import javax.print.attribute.standard.MediaTray;
@@ -30,13 +31,25 @@ import java.util.Locale;
 
 public class PrintServiceMatcher {
     private static final Logger log = LogManager.getLogger(PrintServiceMatcher.class);
+    //todo: include jdk version test for caching when JDK-7001133 is resolved
+    private static final boolean useCache = SystemUtilities.isMac();   // PrintService is slow, use a cache instead per JDK-7001133
 
     public static NativePrinterMap getNativePrinterList(boolean silent, boolean withAttributes) {
         NativePrinterMap printers = NativePrinterMap.getInstance();
-        printers.putAll(CachedPrintService.lookupPrintServices());
+        printers.putAll(lookupPrintServices());
         if (withAttributes) { printers.values().forEach(NativePrinter::getDriverAttributes); }
         if (!silent) { log.debug("Found {} printers", printers.size()); }
         return printers;
+    }
+
+    private static PrintService[] lookupPrintServices() {
+        if (useCache) return CachedPrintService.lookupPrintServices();
+        return  PrintServiceLookup.lookupPrintServices(null, null);
+    }
+
+    private static PrintService lookupDefaultPrintService() {
+        if (useCache) return CachedPrintService.lookupDefaultPrintService();
+        return  PrintServiceLookup.lookupDefaultPrintService();
     }
 
     public static NativePrinterMap getNativePrinterList(boolean silent) {
@@ -48,7 +61,7 @@ public class PrintServiceMatcher {
     }
 
     public static NativePrinter getDefaultPrinter() {
-        PrintService defaultService = CachedPrintService.lookupDefaultPrintService();
+        PrintService defaultService = lookupDefaultPrintService();
 
         if(defaultService == null) {
             return null;
@@ -152,15 +165,14 @@ public class PrintServiceMatcher {
         return use;
     }
 
-    public static NativePrinter
-    matchPrinter(String printerSearch) {
+    public static NativePrinter matchPrinter(String printerSearch) {
         return matchPrinter(printerSearch, false);
     }
 
     public static JSONArray getPrintersJSON(boolean includeDetails) throws JSONException {
         JSONArray list = new JSONArray();
 
-        PrintService defaultService = CachedPrintService.lookupDefaultPrintService();
+        PrintService defaultService = lookupDefaultPrintService();
 
         boolean mediaTrayCrawled = false;
 

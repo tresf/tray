@@ -65,7 +65,6 @@ public abstract class NativePrinterMap extends ConcurrentHashMap<String, NativeP
 
     public boolean contains(PrintService service) {
         for (NativePrinter printer : values()) {
-            //todo, this is a bad if, just return
             if (printer.getPrintService().equals(service)) {
                 return true;
             }

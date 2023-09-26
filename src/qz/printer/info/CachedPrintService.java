@@ -1,7 +1,6 @@
 package qz.printer.info;
 
 import qz.common.CachedObject;
-import qz.utils.SystemUtilities;
 
 import javax.print.*;
 import javax.print.attribute.Attribute;
@@ -16,12 +15,12 @@ public class CachedPrintService implements PrintService {
     public PrintService innerPrintService;
     // PrintService.getName() is slow, use a cache instead per JDK-7001133
     // TODO: Remove this comment when upstream bug report is filed
-    private static final long lifespan = SystemUtilities.isMac() ? CachedObject.DEFAULT_LIFESPAN : 0;
+    private static final long lifespan = CachedObject.DEFAULT_LIFESPAN;
     private static final CachedObject<PrintService> cachedDefault = new CachedObject<>(CachedPrintService::innerLookupDefaultPrintService, lifespan);
     private static final CachedObject<PrintService[]> cachedPrintServices = new CachedObject<>(CachedPrintService::innerLookupPrintServices, lifespan);
     private final CachedObject<String> cachedName;
     private final CachedObject<PrintServiceAttributeSet> cachedAttributeSet;
-    private final HashMap<Class<?>, CachedObject> cachedAttributes = new HashMap<>();
+    private final HashMap<Class<?>, CachedObject<?>> cachedAttributes = new HashMap<>();
 
     public static PrintService lookupDefaultPrintService() {
         return cachedDefault.get();
@@ -76,13 +75,12 @@ public class CachedPrintService implements PrintService {
 
     @Override
     public <T extends PrintServiceAttribute> T getAttribute(Class<T> category) {
-        if (lifespan <= 0) return innerPrintService.getAttribute(category);
         if (!cachedAttributes.containsKey(category)) {
             Supplier<T> supplier = () -> innerPrintService.getAttribute(category);
             CachedObject<T> cachedObject = new CachedObject<>(supplier, lifespan);
             cachedAttributes.put(category, cachedObject);
         }
-        return (T)cachedAttributes.get(category).get();
+        return category.cast(cachedAttributes.get(category).get());
     }
 
     @Override
