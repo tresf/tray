@@ -2,7 +2,6 @@ package qz.printer.info;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import qz.common.CachedObject;
 import qz.utils.SystemUtilities;
 
 import javax.print.PrintService;
@@ -58,9 +57,10 @@ public class NativePrinter {
 
         @Override
         public boolean equals(Object o) {
-            // PrintService.equals(...) is very slow in CUPS; use the pointer
-            if (SystemUtilities.isUnix() && value instanceof PrintService) {
-                return o == value;
+            // PrintService.equals(...) is very slow in CUPS; use the pointer instead per JDK-7001133
+            if (SystemUtilities.isUnix() && value instanceof PrintService ps) {
+                //todo this needs to be more than a name check. maybe use attribute set
+                return ps.getName().equals(getName());
             }
             if (value != null) {
                 return value.equals(o);
@@ -71,10 +71,6 @@ public class NativePrinter {
 
     private final String printerId;
 
-    // PrintService.getName() is slow, use a cache instead per JDK-XXXXXXX
-    // TODO: Remove this comment when upstream bug report is filed
-    private final long lifespan = SystemUtilities.isMac() ? CachedObject.DEFAULT_LIFESPAN : 0;
-    private CachedObject<String> cachedName = new CachedObject<>(this::getNameNative, lifespan);
     private boolean outdated;
     private PrinterProperty<String> description;
     private PrinterProperty<PrintService> printService;
@@ -118,10 +114,6 @@ public class NativePrinter {
     }
 
     public String getName() {
-        return cachedName.get();
-    }
-
-    private String getNameNative() {
         if (printService != null && printService.value() != null) {
             return printService.value().getName();
         }

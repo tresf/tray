@@ -15,13 +15,12 @@ import org.apache.logging.log4j.Logger;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import qz.common.CachedObject;
+import qz.printer.info.CachedPrintService;
 import qz.printer.info.NativePrinter;
 import qz.printer.info.NativePrinterMap;
 import qz.utils.SystemUtilities;
 
 import javax.print.PrintService;
-import javax.print.PrintServiceLookup;
 import javax.print.attribute.ResolutionSyntax;
 import javax.print.attribute.standard.Media;
 import javax.print.attribute.standard.MediaTray;
@@ -32,14 +31,9 @@ import java.util.Locale;
 public class PrintServiceMatcher {
     private static final Logger log = LogManager.getLogger(PrintServiceMatcher.class);
 
-    // PrintServiceLookup.lookupDefaultPrintService() is slow, use a cache instead per JDK-XXXXXXX
-    // todo Fix before merging: mention upsteam bug report
-    private static final long lifespan = SystemUtilities.isWindows() ? 0 : CachedObject.DEFAULT_LIFESPAN;
-    private static CachedObject<PrintService> cachedDefault = new CachedObject<>(PrintServiceLookup::lookupDefaultPrintService, lifespan);
-
     public static NativePrinterMap getNativePrinterList(boolean silent, boolean withAttributes) {
         NativePrinterMap printers = NativePrinterMap.getInstance();
-        printers.putAll(PrintServiceLookup.lookupPrintServices(null, null));
+        printers.putAll(CachedPrintService.lookupPrintServices());
         if (withAttributes) { printers.values().forEach(NativePrinter::getDriverAttributes); }
         if (!silent) { log.debug("Found {} printers", printers.size()); }
         return printers;
@@ -54,7 +48,7 @@ public class PrintServiceMatcher {
     }
 
     public static NativePrinter getDefaultPrinter() {
-        PrintService defaultService = cachedDefault.get();
+        PrintService defaultService = CachedPrintService.lookupDefaultPrintService();
 
         if(defaultService == null) {
             return null;
@@ -62,6 +56,7 @@ public class PrintServiceMatcher {
 
         NativePrinterMap printers = NativePrinterMap.getInstance();
         if (!printers.contains(defaultService)) {
+            //todo: is this working correctly? it seems to set the printers list = to [1] {defaultPrinter}
             printers.putAll(defaultService);
         }
 
@@ -165,7 +160,7 @@ public class PrintServiceMatcher {
     public static JSONArray getPrintersJSON(boolean includeDetails) throws JSONException {
         JSONArray list = new JSONArray();
 
-        PrintService defaultService = PrintServiceLookup.lookupDefaultPrintService();
+        PrintService defaultService = CachedPrintService.lookupDefaultPrintService();
 
         boolean mediaTrayCrawled = false;
 
