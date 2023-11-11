@@ -1,10 +1,12 @@
 /out/
 /js/node_modules
-/lib/javafx*
+/deps/*
+!/deps/manual/
 /.idea/workspace.xml
 /.idea/misc.xml
 /.idea/uiDesigner.xml
 /.idea/compiler.xml
+/reports/
 /fx.zip
 /README.md
 .DS_Store
