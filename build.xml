@@ -2,7 +2,7 @@
 
 <project name="qz" default="distribute" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
     <property file="ant/project.properties"/>
-    <property file="ant/deps.properties"/>
+    <property file="ant/ivy-deps.properties"/>
     <import file="ant/platform-detect.xml"/>
     <import file="ant/signing.xml"/>
     <import file="ant/apple/installer.xml"/>
@@ -50,7 +50,7 @@
         <ivy:cleancache/>
     </target>
 
-    <target name="deps" depends="platform-detect,clean-ivy-cache">
+    <target name="ivy-deps" depends="platform-detect,clean-ivy-cache">
         <ivy:resolve file="ant/ivy.xml"/>
         <ivy:report/>
         <ivy:retrieve pattern="${ivy.lib.dir}/[artifact]-[revision](-[classifier]).[ext]" sync="true"/>
@@ -66,7 +66,7 @@
         </delete>
     </target>
 
-    <target name="compile-socket" depends="init,deps">
+    <target name="compile-socket" depends="init,ivy-deps">
         <mkdir dir="${build.dir}/${project.filename}"/>
         <javac destdir="${build.dir}/${project.filename}" source="${javac.source}" target="${javac.target}" includeantruntime="false" encoding="UTF-8" debug="true">
             <src path="${src.dir}"/>
