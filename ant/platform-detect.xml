@@ -256,6 +256,7 @@
         <property name="host.os" value="linux" description="fallback value"/>
     </target>
 
+    <!-- Calculate ${host.javafx.platform}, ${target.javafx.platform} for ivy, ant -->
     <target name="get-javafx-platform">
         <!-- Target suffix is "-monocle", unless disabled -->
         <condition property="target.javafx.suffix" value="-monocle">
