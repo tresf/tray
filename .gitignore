@@ -1,5 +1,6 @@
 /out/
 /js/node_modules
+/lib/*
 /deps/*
 !/deps/manual/
 /.idea/workspace.xml
