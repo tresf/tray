@@ -213,7 +213,6 @@ public class PrintingUtilities {
 
             processor.parseData(params.getJSONArray("data"), options);
             processor.print(output, options);
-
             log.info("Printing complete");
 
             PrintSocketClient.sendResult(session, UID, null);

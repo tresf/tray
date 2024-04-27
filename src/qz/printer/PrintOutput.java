@@ -3,7 +3,6 @@ package qz.printer;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import qz.printer.info.NativePrinter;
-import qz.printer.info.NativePrinterMap;
 import qz.utils.FileUtilities;
 
 import javax.print.PrintService;
@@ -61,6 +60,7 @@ public class PrintOutput {
     public PrintService getPrintService() {
         return printer.getPrintService().value();
     }
+
     public NativePrinter getNativePrinter() {
         return printer;
     }
