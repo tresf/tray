@@ -24,7 +24,6 @@ import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
 import javax.print.attribute.ResolutionSyntax;
 import javax.print.attribute.standard.*;
-import java.awt.print.PrinterException;
 import java.util.*;
 
 public class PrintServiceMatcher {
