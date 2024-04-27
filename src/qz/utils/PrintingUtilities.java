@@ -33,7 +33,7 @@ import java.util.Locale;
 public class PrintingUtilities {
 
     private static final Logger log = LogManager.getLogger(PrintingUtilities.class);
-    private static final String PRINT_SERVICE_MESSAGE = "PrintService is no longer available.";
+    private static final String PRINT_SERVICE_MISSING = "PrintService is no longer available.";
 
     private static GenericKeyedObjectPool<Format,PrintProcessor> processorPool;
 
@@ -225,8 +225,8 @@ public class PrintingUtilities {
             // Catch edge-case with lost PrintService reference
             // See: https://github.com/qzind/tray/issues/1259
             if(e instanceof PrinterException) {
-                if(PRINT_SERVICE_MESSAGE.equals(e.getMessage())) {
-                    log.warn("Suppressed exception: \"{}\".  Trying to recover...", PRINT_SERVICE_MESSAGE);
+                if(PRINT_SERVICE_MISSING.equals(e.getMessage())) {
+                    log.warn("Suppressed exception: \"{}\".  Trying to recover...", PRINT_SERVICE_MISSING);
                     PrintServiceMatcher.refreshPrintService(output.getNativePrinter());
                     processPrintRequest(session, UID, params); // recurse
                     return;
