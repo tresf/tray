@@ -202,8 +202,9 @@ public class PrintingUtilities {
         PrintProcessor processor = PrintingUtilities.getPrintProcessor(format);
         log.debug("Using {} to print", processor.getClass().getName());
 
+        PrintOutput output = null;
         try {
-            PrintOutput output = new PrintOutput(params.optJSONObject("printer"));
+            output = new PrintOutput(params.optJSONObject("printer"));
             PrintOptions options = new PrintOptions(params.optJSONObject("options"), output, format);
 
             if(type != Type.RAW && !output.isSetService()) {
@@ -211,17 +212,8 @@ public class PrintingUtilities {
             }
 
             processor.parseData(params.getJSONArray("data"), options);
+            processor.print(output, options);
 
-            try {
-                processor.print(output, options);
-            } catch (PrinterException e) {
-                // e.getMessage() can be null, do not reverse this comparison
-                if (!PRINT_SERVICE_MESSAGE.equals(e.getMessage())) throw e;
-                // https://github.com/qzind/tray/issues/1259
-                log.info("Print Failed, retrying with a new PrintService");
-                output.refreshPrintService();
-                processor.print(output, options);
-            }
             log.info("Printing complete");
 
             PrintSocketClient.sendResult(session, UID, null);
@@ -231,6 +223,16 @@ public class PrintingUtilities {
             PrintSocketClient.sendError(session, UID, "Printing cancelled");
         }
         catch(Exception e) {
+            // Catch edge-case with lost PrintService reference
+            // See: https://github.com/qzind/tray/issues/1259
+            if(e instanceof PrinterException) {
+                if(PRINT_SERVICE_MESSAGE.equals(e.getMessage())) {
+                    log.warn("Suppressed exception: \"{}\".  Trying to recover...", PRINT_SERVICE_MESSAGE);
+                    PrintServiceMatcher.refreshPrintService(output.getNativePrinter());
+                    processPrintRequest(session, UID, params); // recurse
+                    return;
+                }
+            }
             log.error("Failed to print", e);
             PrintSocketClient.sendError(session, UID, e);
         }

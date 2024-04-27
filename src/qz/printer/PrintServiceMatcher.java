@@ -24,6 +24,7 @@ import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
 import javax.print.attribute.ResolutionSyntax;
 import javax.print.attribute.standard.*;
+import java.awt.print.PrinterException;
 import java.util.*;
 
 public class PrintServiceMatcher {
@@ -165,6 +166,19 @@ public class PrintServiceMatcher {
 
     public static NativePrinter matchPrinter(String printerSearch) {
         return matchPrinter(printerSearch, false);
+    }
+
+    /**
+     * Attempts to recover from a PrintService becoming unavailable
+     * See: https://github.com/qzind/tray/issues/1259
+     */
+    public static void refreshPrintService(NativePrinter nativePrinter) throws IllegalArgumentException {
+        String name = nativePrinter.getName();
+        NativePrinterMap.getInstance().remove(name);
+
+        if (matchPrinter(name) == null) {
+            throw new IllegalArgumentException("Cannot find printer with name \"" + name + "\"");
+        }
     }
 
     public static JSONArray getPrintersJSON(boolean includeDetails) throws JSONException {

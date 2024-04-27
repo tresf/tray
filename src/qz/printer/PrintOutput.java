@@ -61,16 +61,6 @@ public class PrintOutput {
     public PrintService getPrintService() {
         return printer.getPrintService().value();
     }
-
-    public void refreshPrintService() {
-        String name = printer.getName();
-        NativePrinterMap.getInstance().remove(name);
-        printer = PrintServiceMatcher.matchPrinter(name);
-        if (printer == null) {
-            throw new IllegalArgumentException("Cannot find printer with name \"" + name + "\"");
-        }
-    }
-
     public NativePrinter getNativePrinter() {
         return printer;
     }
