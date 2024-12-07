@@ -84,14 +84,10 @@
         </dependency>
         <dependency name="hid4java" org="org.hid4java" conf="*->default" rev="${hid4java.version}">
             <exclude name="jna"/>
-            <!-- Skip, need 0.7.2-SNAPSHOT -->
+            <!-- Skip, need 0.8.0+7-SNAPSHOT https://github.com/qzind/tray/pull/1267 -->
             <exclude name="*"/>
         </dependency>
-        <dependency name="jssc" org="io.github.java-native" conf="*->default" rev="${jssc.version}">
-            <exclude name="jna"/>
-            <!-- Skip, need 2.9.6-SNAPSHOT -->
-            <exclude name="*"/>
-        </dependency>
+        <dependency name="jssc" org="io.github.java-native" conf="*->default" rev="${jssc.version}"/>
         <!-- Theming -->
         <dependency name="darcula-bobbylight" org="com.bulenkov.darcula" conf="*->default" rev="0.0.0">
             <!-- Skip, missing -->
