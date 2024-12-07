@@ -167,7 +167,7 @@
         <path id="icu4j-slim.found">
             <first>
                 <fileset dir="${lib.dir}">
-                    <include name="icu4j-charset-*.jar"/>
+                    <include name="**/icu4j-charset-*.jar"/>
                 </fileset>
             </first>
         </path>
@@ -177,7 +177,7 @@
         <path id="tcvn-3.found">
             <first>
                 <fileset dir="${lib.dir}">
-                    <include name="TCVN-3*.jar"/>
+                    <include name="**/TCVN-3*.jar"/>
                 </fileset>
             </first>
         </path>
