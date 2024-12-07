@@ -26,6 +26,8 @@ import qz.ui.tray.TrayType;
 import qz.utils.*;
 import qz.ws.PrintSocketServer;
 import qz.ws.SingleInstanceChecker;
+import qz.ws.WebsocketPorts;
+import qz.ws.substitutions.Substitutions;
 
 import javax.swing.*;
 import java.awt.*;
@@ -98,6 +100,9 @@ public class TrayManager {
         // Set strict certificate mode preference
         Certificate.setTrustBuiltIn(!getPref(TRAY_STRICTMODE));
 
+        // Configures JSON websocket messages
+        Substitutions.getInstance();
+
         // Set FileIO security
         FileUtilities.setFileIoEnabled(getPref(SECURITY_FILE_ENABLED));
         FileUtilities.setFileIoStrict(getPref(SECURITY_FILE_STRICT));
@@ -115,7 +120,7 @@ public class TrayManager {
         iconCache = new IconCache();
 
         if (SystemUtilities.isSystemTraySupported(headless)) { // UI mode with tray
-            switch(SystemUtilities.getOsType()) {
+            switch(SystemUtilities.getOs()) {
                 case WINDOWS:
                     tray = TrayType.JX.init(iconCache);
                     // Undocumented HiDPI behavior
@@ -534,9 +539,9 @@ public class TrayManager {
         }
     }
 
-    public void setServer(Server server, int insecurePortIndex) {
+    public void setServer(Server server, WebsocketPorts websocketPorts) {
         if (server != null && server.getConnectors().length > 0) {
-            singleInstanceCheck(PrintSocketServer.INSECURE_PORTS, insecurePortIndex);
+            singleInstanceCheck(websocketPorts);
 
             displayInfoMessage("Server started on port(s) " + PrintSocketServer.getPorts(server));
 
@@ -632,11 +637,14 @@ public class TrayManager {
         }
     }
 
-    public void singleInstanceCheck(java.util.List<Integer> insecurePorts, Integer insecurePortIndex) {
-        for(int port : insecurePorts) {
-            if (port != insecurePorts.get(insecurePortIndex)) {
-                new SingleInstanceChecker(this, port);
-            }
+    public void singleInstanceCheck(WebsocketPorts websocketPorts) {
+        // Secure
+        for(int port : websocketPorts.getUnusedSecurePorts()) {
+            new SingleInstanceChecker(this, port, true);
+        }
+        // Insecure
+        for(int port : websocketPorts.getUnusedInsecurePorts()) {
+            new SingleInstanceChecker(this, port, false);
         }
     }
 
