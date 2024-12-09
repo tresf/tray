@@ -51,6 +51,7 @@
     </target>
 
     <target name="ivy-deps" depends="platform-detect,clean-ivy-cache">
+        <ivy:settings file="ant/ivy-settings.xml"/>
         <ivy:resolve file="ant/ivy.xml"/>
         <ivy:report/>
         <ivy:retrieve pattern="${ivy.lib.dir}/[artifact]-[revision](-[classifier]).[ext]" sync="true"/>

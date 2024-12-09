@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ivysettings>
+    <settings defaultResolver="gluonhq-chain"/>
+    <resolvers>
+        <ibiblio name="maven" m2compatible="true" root="http://mvnrepository.com/artifact/"/>
+        <ibiblio name="gluonhq" m2compatible="true" root="https://nexus.gluonhq.com/nexus/content/repositories/releases/"/>
+        <chain name="gluonhq-chain">
+            <resolver ref="maven"/>
+            <resolver ref="gluonhq"/>
+        </chain>
+    </resolvers>
+</ivysettings>
