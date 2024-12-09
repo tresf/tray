@@ -258,23 +258,21 @@
 
     <!-- Calculate host.javafx.platform, target.javafx.platform for ivy, ant -->
     <target name="get-javafx-platform">
-        <!-- Target suffix is "-monocle", unless disabled -->
-        <condition property="target.javafx.suffix" value="-monocle">
+        <!-- TODO: JavaFX does not offer Windows ARM64 binaries; fallback to Intel (default/unqualified arch suffix); remove when SUPQZ-11 is resolved -->
+        <condition property="target.javafx.arch" value="">
             <and>
-                <istrue value="${javafx.monocle}"/>
-                <!-- FIXME REMOVE WHEN SUPQZ-18 IS RESOLVED -->
-                <not>
-                    <and>
-                        <isset property="target.os.linux"/>
-                        <isset property="target.arch.x86_64"/>
-                    </and>
-                </not>
-                <!-- FIXME REMOVE WHEN SUPQZ-18 IS RESOLVED -->
+                <isset property="target.os.windows"/>
+                <isset property="target.arch.aarch64"/>
             </and>
         </condition>
-        <property description="fallback value" name="target.javafx.suffix" value=""/>
+        <condition property="host.javafx.arch" value="">
+            <and>
+                <isset property="host.os.windows"/>
+                <isset property="host.arch.aarch64"/>
+            </and>
+        </condition>
 
-        <!-- Target arch is "-${target.arch}", unless Intel -->
+        <!-- Target arch suffix is qualified (e.g. "-${target.arch}"), unless Intel -->
         <condition property="target.javafx.arch" value="">
             <isset property="target.arch.x86_64"/>
         </condition>
@@ -286,26 +284,10 @@
         </condition>
         <property name="target.javafx.os" value="${target.os}"/>
 
-        <!-- Create target javafx.platform (e.g. "linux-aarch64-monocle") -->
-        <property name="target.javafx.platform" value="${target.javafx.os}${target.javafx.arch}${target.javafx.suffix}"/>
+        <!-- Create target javafx.platform (e.g. "linux", "linux-aarch64") -->
+        <property name="target.javafx.platform" value="${target.javafx.os}${target.javafx.arch}"/>
 
-        <!-- Host suffix is "-monocle", unless disabled -->
-        <condition property="host.javafx.suffix" value="-monocle">
-            <and>
-                <istrue value="${javafx.monocle}"/>
-                <!-- FIXME REMOVE WHEN SUPQZ-18 IS RESOLVED -->
-                <not>
-                    <and>
-                        <isset property="host.os.linux"/>
-                        <isset property="host.arch.x86_64"/>
-                    </and>
-                </not>
-                <!-- FIXME REMOVE WHEN SUPQZ-18 IS RESOLVED -->
-            </and>
-        </condition>
-        <property description="fallback value" name="host.javafx.suffix" value=""/>
-
-        <!-- Host arch is "-${host.arch}", unless Intel -->
+        <!-- Host arch suffix is qualified (e.g. "-${target.arch}"), unless Intel -->
         <condition property="host.javafx.arch" value="">
             <isset property="host.arch.x86_64"/>
         </condition>
@@ -317,7 +299,7 @@
         </condition>
         <property name="host.javafx.os" value="${host.os}"/>
 
-        <!-- Create host javafx.platform (e.g. "linux-aarch64-monocle") -->
-        <property name="host.javafx.platform" value="${host.javafx.os}${host.javafx.arch}${host.javafx.suffix}"/>
+        <!-- Create host javafx.platform (e.g. "linux", "linux-aarch64") -->
+        <property name="host.javafx.platform" value="${host.javafx.os}${host.javafx.arch}"/>
     </target>
 </project>
