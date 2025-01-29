@@ -81,7 +81,10 @@ public class SerialIO implements DeviceListener {
         try {
             // Receive data
             if (event.isRXCHAR()) {
-                data.append(port.readBytes(event.getEventValue(), TIMEOUT));
+                log.debug("Reading data on [{}]...", portName);
+                byte[] received = port.readBytes(event.getEventValue(), TIMEOUT);
+                log.debug("Received data on [{}]: {}", portName, new String(received, format.getEncoding()));
+                data.append(received);
 
                 String response = null;
                 if (format.isBoundNewline()) {
@@ -254,8 +257,10 @@ public class SerialIO implements DeviceListener {
             setOptions(opts);
         }
 
-        log.debug("Sending data over [{}]", portName);
-        port.writeBytes(DeviceUtilities.getDataBytes(params, serialOpts.getPortSettings().getEncoding()));
+        byte[] data = DeviceUtilities.getDataBytes(params, serialOpts.getPortSettings().getEncoding());
+        log.debug("Sending data over [{}]: {}", portName, new String(data, serialOpts.getPortSettings().getEncoding()));
+        port.writeBytes(data);
+        log.debug("Data sent on [{}]", portName);
     }
 
     /**
