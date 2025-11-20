@@ -17,6 +17,7 @@ jobs:
 
       # These were here before me
       - run: sudo apt-get install nsis makeself printer-driver-cups-pdf
+      - run: sudo service cups start
       - run: ant makeself
       - run: sudo out/qz-tray-*.run
       - run: /opt/qz-tray/qz-tray --version
@@ -33,8 +34,6 @@ jobs:
           nvm install 24
           node -v
           npm -v
-
-      - run: sudo service cups start
 
       - name: Install Node Dependencies
         run: npm install
