@@ -16,7 +16,7 @@ jobs:
           distribution: 'liberica'
 
       # These were here before me
-      - run: sudo apt-get install nsis makeself
+      - run: sudo apt-get install nsis makeself printer-driver-cups-pdf
       - run: ant makeself
       - run: sudo out/qz-tray-*.run
       - run: /opt/qz-tray/qz-tray --version
