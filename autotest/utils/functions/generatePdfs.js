@@ -4,6 +4,8 @@ import os from "node:os";
 import { copyFileSync, unlinkSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import WebSocket from "ws";
+
 import { watchForNewPdf } from "./watchForNewPdf.js";
 import { calculatePdfPrintPath } from "./calculatePdfPrintPath.js";
 import { createDirectoryTree } from "./createDirectoryTree.js"
@@ -115,6 +117,7 @@ export async function generatePdfs( outputFolder, isPrintPdf = true, isPrintImag
 
 	/////////////////////////////////////////////////////////////////////////// Finding the PDF printer
 
+	qz.api.setWebSocketType(WebSocket);
 	await qz.websocket.connect();
 
 	const found = await qz.printers.find("pdf"); // TODO: Default printer!!!
