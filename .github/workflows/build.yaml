@@ -17,13 +17,17 @@ jobs:
 
       # These were here before me
       - run: sudo apt-get install nsis makeself printer-driver-cups-pdf
-      - run: sudo service cups start
       - run: ant makeself
       - run: sudo out/qz-tray-*.run
       - run: /opt/qz-tray/qz-tray --version
       - run: ant nsis
 
       # Autotest stuff
+
+      - name: Start CUPS (manual, reliable)
+        run: |
+          sudo /usr/sbin/cupsd -f &
+          sleep 2
 
       # Installing Node via the website commands, since the package is out-of-date?
       # https://nodejs.org/en/download
