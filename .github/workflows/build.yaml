@@ -34,6 +34,8 @@ jobs:
           node -v
           npm -v
 
+      - run: sudo service cups start
+
       - name: Install Node Dependencies
         run: npm install
         working-directory: autotest
