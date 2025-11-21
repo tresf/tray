@@ -24,6 +24,9 @@ jobs:
 
       # Autotest stuff
 
+      - name: Print CUPS-PDF output location
+        run: grep -i '^[[:space:]]*Out[[:space:]]' /etc/cups/cups-pdf.conf
+
       - name: Manually start CUPS
         run: sudo service cups start
 
