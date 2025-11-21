@@ -24,6 +24,15 @@ jobs:
 
       # Autotest stuff
 
+      - name: "Remove existing CUPS"
+        run: sudo apt-get remove -yqq cups cups-pdf
+
+      - name: "Install new CUPS"
+        run: |
+             sudo apt-get update
+             sudo apt-get install -yqq cups cups-pdf cups-client
+
+
       - name: Print CUPS-PDF output location
         # run: grep -i '^[[:space:]]*Out[[:space:]]' /etc/cups/cups-pdf.conf
         run: cat /etc/cups/cups-pdf.conf
