@@ -27,6 +27,11 @@ jobs:
       - name: Manually start CUPS
         run: sudo service cups start
 
+      - name: Check CUPS-PDF availability
+        run: |
+          lpstat -r
+          lpstat -t | grep cups
+
       # Installing Node via the website commands, since the package is out-of-date?
       # https://nodejs.org/en/download
       - name: Install Node
