@@ -69,8 +69,7 @@ const fingerParams = {
 };
 
 const trayParams = {
-	cmd: 'java',
-	// opts: [util.format('-DtrustedRootCert=%s', TMP_CERT), '-jar', '../out/dist/qz-tray.jar'],
+	cmd: '/opt/qz-tray/runtime/bin/java',
 	opts: [util.format('-DtrustedRootCert=%s', TMP_CERT), '-jar', '/opt/qz-tray/qz-tray.jar'],
 	desc: "Start Tray",
 	expect: ' started on port'
