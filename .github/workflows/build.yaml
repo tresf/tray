@@ -41,6 +41,11 @@ jobs:
         run: npm install
         working-directory: autotest
 
+      - name: Create PDF output directory
+        run: |
+          mkdir -p "$HOME/PDF"
+          chmod 1777 "$HOME/PDF"
+
       - name: Run Autotest Script
         run: node test-run/start-tray.js
         working-directory: autotest
