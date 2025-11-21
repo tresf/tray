@@ -24,12 +24,10 @@ const username = os.userInfo().username;
  * @throws {Error} If the OS is unsupported.
  *
  * @note This function relies on {@link os.userInfo} to resolve the username.
- * @note TODO: Ubuntu prints to <code>$HOME/PDF</code>
  */
 export function calculatePdfPrintPath() {
 	switch ( os.platform() ) {
 		case "win32": return path.join("C:", "Users", username, "PDF");
-		// case "linux": return path.join("/", "var", "spool", "cups-pdf", username);
 		case "linux": return path.join("/", "home", username, "PDF");
 		case "darwin": return path.join("/", "private", "var", "spool", "pdfwriter", username);
 		default: throw new Error(`ERROR (calculatePdfPrintPath): Unsupported OS (${os.platform()})`);
