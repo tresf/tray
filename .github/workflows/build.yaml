@@ -4,6 +4,7 @@ on: [push, pull_request]
 
 jobs:
   ubuntu:
+    permissions: {}
     runs-on: [ubuntu-latest]
     strategy:
       matrix:
@@ -23,6 +24,9 @@ jobs:
       - run: ant nsis
 
       # Autotest stuff
+
+      - name: Disable AppArmor on the GitHub runner
+        uses: cisagov/action-disable-apparmor@437d94f26a2e4bf8c03acfb500a6afc688b497db
 
       - name: "Remove existing CUPS"
         run: sudo apt-get remove -yqq cups cups-pdf
