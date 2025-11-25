@@ -17,6 +17,7 @@ jobs:
           distribution: 'liberica'
 
       # These were here before me
+      - run: sudo apt-get update
       - run: sudo apt-get install nsis makeself printer-driver-cups-pdf ghostscript
       - run: ant makeself
       - run: sudo out/qz-tray-*.run
