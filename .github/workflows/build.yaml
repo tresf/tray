@@ -35,7 +35,7 @@ jobs:
       - name: "Install new CUPS"
         run: |
              sudo apt-get update
-             sudo apt-get install -yqq cups cups-bsd cups-client
+             sudo apt-get install -yqq cups-bsd cups-pdf cups-client
 
       - name: Print CUPS-PDF output location
         run: grep -i '^[[:space:]]*Out[[:space:]]' /etc/cups/cups-pdf.conf
