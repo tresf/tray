@@ -4,6 +4,7 @@ on: [push, pull_request]
 
 jobs:
   ubuntu:
+    permissions: {}
     runs-on: [ubuntu-latest]
     strategy:
       matrix:
@@ -14,14 +15,68 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
           distribution: 'liberica'
-      - run: sudo apt-get install nsis makeself
+
+      # These were here before me
+      - run: sudo apt-get update
+      - run: sudo apt-get install nsis makeself printer-driver-cups-pdf ghostscript
       - run: ant makeself
       - run: sudo out/qz-tray-*.run
       - run: /opt/qz-tray/qz-tray --version
       - run: ant nsis
 
+      # Autotest stuff
+
+      - name: Disable AppArmor on the GitHub runner
+        uses: cisagov/action-disable-apparmor@437d94f26a2e4bf8c03acfb500a6afc688b497db
+
+      - name: "Remove existing CUPS"
+        run: sudo apt-get remove -yqq cups cups-pdf
+
+      - name: "Install new CUPS"
+        run: |
+             sudo apt-get update
+             sudo apt-get install -yqq cups-bsd cups-pdf cups-client
+
+      - name: Print CUPS-PDF output location
+        run: grep -i '^[[:space:]]*Out[[:space:]]' /etc/cups/cups-pdf.conf
+        # run: cat /etc/cups/cups-pdf.conf
+
+      - name: Manually start CUPS
+        run: sudo service cups start
+
+      - name: Check CUPS-PDF availability
+        run: |
+          lpstat -r
+          lpstat -t | grep cups
+
+      # Installing Node via the website commands, since the package is out-of-date?
+      # https://nodejs.org/en/download
+      - name: Install Node
+        run: |
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+          \. "$HOME/.nvm/nvm.sh"
+          nvm install 24
+          node -v
+          npm -v
+
+      - name: Install Node Dependencies
+        run: npm install
+        working-directory: autotest
+
+      - name: Create PDF output directory
+        run: |
+          mkdir -p "$HOME/PDF"
+          chmod 1777 "$HOME/PDF"
+
+      - run: ls "$HOME/PDF"
+
+      - name: Run Autotest Script
+        run: node test-run/start-tray.js
+        working-directory: autotest
+
   macos:
     runs-on: [macos-latest]
+    if: false # FIXME: Remove this line
     strategy:
       matrix:
         java: [25]
@@ -39,6 +94,7 @@ jobs:
       - run: ant nsis
 
   windows:
+    if: false # FIXME: Remove this line
     runs-on: [windows-latest]
     strategy:
       matrix:

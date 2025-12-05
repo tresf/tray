@@ -1,0 +1,11 @@
+node_modules/
+baseline/
+other/
+latest/
+out/
+.DS_Store
+diff.png
+package-lock.json
+*.pdf
+cert.*
+pkey.*

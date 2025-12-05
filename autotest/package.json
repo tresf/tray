@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "colors": "^1.4.0",
+    "pdf2pic": "^3.2.0",
+    "pixelmatch": "^7.1.0",
+    "pngjs": "^7.0.0",
+    "ws": "^8.18.3"
+  },
+  "type": "module"
+}
