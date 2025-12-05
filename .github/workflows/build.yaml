@@ -67,6 +67,7 @@ jobs:
         run: |
           mkdir -p "$HOME/PDF"
           chmod 1777 "$HOME/PDF"
+          ls "$HOME/PDF"
 
       - name: Run Autotest Script
         run: node test-run/start-tray.js
