@@ -82,11 +82,8 @@ async function processPrintJobs(outputFolder, configs, data, foundPrinter) {
 
 		console.log(`Processing '${configDef.name}'...`);
 
-		console.log("creating config")
 		const config = qz.configs.create(foundPrinter, configDef.options);
-		console.log("running qz.print")
 		await qz.print(config, data);
-		console.log("done")
 
 		const newPDF = await watchForNewPdf(pdfPrintPath);
 		// The line below was removed because of cross-platform file moving issue (EXDEV)
