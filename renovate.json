@@ -6,7 +6,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["^ant/dependencies\\.properties$"],
+      "fileMatch": ["^ant/dependencies\\.properties$"],
       "matchStrings": [
         "[\\w-]+\\.org=(?<groupName>[^\\s\\n]+)\\s+[\\w-]+\\.name=(?<artifactName>[^\\s\\n]+)\\s+[\\w-]+\\.rev=(?<currentValue>[^\\s\\n]+)"
       ],
