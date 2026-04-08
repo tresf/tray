@@ -67,7 +67,7 @@ public class JLink {
         this.javaVersion = getParam("javaVersion", javaVersion, JAVA_DEFAULT_VERSION);
         this.gcVersion = getParam("gcVersion", gcVersion, JAVA_DEFAULT_GC_VERSION);
 
-        this.javaSemver = SystemUtilities.getJavaVersion(this.javaVersion);
+        this.javaSemver = SystemUtilities.parseJavaVersion(this.javaVersion);
 
         // Optional: Provide the location of a custom JDK on the local filesystem
         if(!StringUtils.isEmpty(targetJdk)) {
@@ -78,7 +78,7 @@ public class JLink {
             if(customVersion.contains("\"")) {
                 customVersion = customVersion.split("\"")[1];
             }
-            Version customSemver = SystemUtilities.getJavaVersion(customVersion);
+            Version customSemver = SystemUtilities.parseJavaVersion(customVersion);
             if(needsDownload(javaSemver, customSemver)) {
                 // The "release" file doesn't have build info, so we can't auto-download :(
                 if(javaSemver.getMajorVersion() != customSemver.getMajorVersion()) {
@@ -131,7 +131,7 @@ public class JLink {
 
         // Per JDK-8240734: Major versions checks aren't enough starting with 11.0.16+8
         // see also https://github.com/adoptium/adoptium-support/issues/557
-        Version bad = SystemUtilities.getJavaVersion("11.0.16+8");
+        Version bad = SystemUtilities.parseJavaVersion("11.0.16+8");
         if(want.greaterThanOrEqualTo(bad) && installed.lessThan(bad) ||
                 installed.greaterThanOrEqualTo(bad) && want.lessThan(bad)) {
                 // Force download
@@ -236,6 +236,8 @@ public class JLink {
                 // Java accessibility bridge dependency, see https://github.com/qzind/tray/issues/1234
                 depList.add("jdk.accessibility");
             default:
+                // Adds "bin/jcmd"
+                depList.add("jdk.jcmd");
                 // "jar:" URLs create transient zipfs dependency, see https://stackoverflow.com/a/57846672/3196753
                 depList.add("jdk.zipfs");
                 // fix for https://github.com/qzind/tray/issues/894 solution from https://github.com/adoptium/adoptium-support/issues/397
@@ -270,7 +272,7 @@ public class JLink {
             fieldMap.put("%BUNDLE_VENDOR%", javaVendor.getVendorName());
             fieldMap.put("%BUNDLE_PRODUCT%", javaVendor.getProductName());
             log.info("Deploying {}/Info.plist", macOS.getParent());
-            FileUtilities.configureAssetFile("assets/mac-runtime.plist.in", macOS.getParent().resolve("Info.plist"), fieldMap, JLink.class);
+            FileUtilities.configureAssetToFile(JLink.class, "assets/mac-runtime.plist.in", fieldMap, macOS.getParent().resolve("Info.plist").toFile());
         }
 
         FileUtils.deleteQuietly(outPath.toFile());
@@ -294,6 +296,7 @@ public class JLink {
                 case WINDOWS:
                     keepFiles.add("java.exe");
                     keepFiles.add("javaw.exe");
+                    keepFiles.add("jcmd.exe");
                     if(depList.contains("jdk.accessibility")) {
                         // Java accessibility bridge switching tool
                         keepFiles.add("jabswitch.exe");
@@ -303,6 +306,7 @@ public class JLink {
                     break;
                 default:
                     keepFiles.add("java");
+                    keepFiles.add("jcmd");
                     keepExt = null;
             }
 
