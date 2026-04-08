@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:base"],
+  "automerge": false,
+  "dependencyDashboard": true,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["^ant/dependencies\\.properties$"],
+      "matchStrings": [
+        "[\\w-]+\\.org=(?<groupName>[^\\s\\n]+)\\s+[\\w-]+\\.name=(?<artifactName>[^\\s\\n]+)\\s+[\\w-]+\\.rev=(?<currentValue>[^\\s\\n]+)"
+      ],
+      "depNameTemplate": "{{{groupName}}}:{{{artifactName}}}",
+      "datasourceTemplate": "maven"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["*"],
+      "minimumReleaseAge": "3"
+    }
+  ]
+}
