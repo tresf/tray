@@ -1,42 +1,18 @@
 package qz.communication;
 
-import jssc.SerialPortEvent;
-import jssc.SerialPortEventListener;
-import jssc.SerialPortException;
-import jssc.SerialPortTimeoutException;
+import jssc.*;
 import org.codehaus.jettison.json.JSONObject;
 import org.testng.Assert;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class SerialIOTests {
     private static final String PORT_NAME = "TEST_PORT";
     private static final int EXPECTED_READ_TIMEOUT = 1200;
-
-    private static SerialIO openedSerialWith(FakeSerialPortAdapter fake) throws SerialPortException {
-        SerialIO serial = serialWith(fake);
-        Assert.assertTrue(serial.open(new SerialOptions()));
-        return serial;
-    }
-
-    private static SerialIO serialWith(FakeSerialPortAdapter fake) {
-        return new SerialIO(PORT_NAME, null, portName -> fake);
-    }
-
-    private static SerialIO serialWith(FakeSerialPortAdapter first, FakeSerialPortAdapter second) {
-        AtomicInteger creates = new AtomicInteger();
-        // SerialIO creates the native adapter during open
-        // so return one fake per open
-        return new SerialIO(PORT_NAME, null, portName -> creates.getAndIncrement() == 0 ? first : second);
-    }
-
-    private static SerialPortEvent rxEvent(int value) {
-        return new SerialPortEvent(PORT_NAME, SerialPortEvent.RXCHAR, value);
-    }
 
     private static void expectSerialPortException(SerialAction action) throws Exception {
         try {
@@ -46,11 +22,20 @@ public class SerialIOTests {
         }
     }
 
+    private SerialIO serial;
+    private FakeSerialPort fake;
+
+    @BeforeMethod
+    public SerialIO setUp() throws SerialPortException {
+        serial = new SerialIO(PORT_NAME, null, FakeSerialPort::new);
+        serial.open(new SerialOptions());
+        fake = (FakeSerialPort)serial.getPort();
+
+        return serial;
+    }
+
     @Test
     public void closeShouldIgnoreAlreadyClosedSerial() {
-        FakeSerialPortAdapter fake = new FakeSerialPortAdapter();
-        SerialIO serial = serialWith(fake);
-
         serial.close();
 
         Assert.assertEquals(fake.closeCalls, 0);
@@ -59,9 +44,6 @@ public class SerialIOTests {
 
     @Test
     public void closeShouldOnlyCloseNativePortOnce() throws Exception {
-        FakeSerialPortAdapter fake = new FakeSerialPortAdapter();
-        SerialIO serial = openedSerialWith(fake);
-
         serial.close();
         serial.close();
 
@@ -71,9 +53,6 @@ public class SerialIOTests {
 
     @Test
     public void sendDataAfterCloseShouldNotWriteToNativePort() throws Exception {
-        FakeSerialPortAdapter fake = new FakeSerialPortAdapter();
-        SerialIO serial = openedSerialWith(fake);
-
         serial.close();
 
         expectSerialPortException(() -> serial.sendData(new JSONObject().put("data", "hello"), null));
@@ -82,23 +61,18 @@ public class SerialIOTests {
 
     @Test
     public void processSerialEventAfterCloseShouldNotReadNativePort() throws Exception {
-        FakeSerialPortAdapter fake = new FakeSerialPortAdapter();
-        SerialIO serial = openedSerialWith(fake);
-
         serial.close();
-        String output = serial.processSerialEvent(rxEvent(5));
+        String output = serial.processSerialEvent(new SerialPortEvent(serial.getPort(), SerialPort.MASK_RXCHAR, 5));
 
         Assert.assertNull(output);
         Assert.assertEquals(fake.readCalls, 0);
     }
 
     @Test
-    public void processSerialEventShouldUseConfiguredReadTimeout() throws Exception {
-        FakeSerialPortAdapter fake = new FakeSerialPortAdapter();
+    public void processSerialEventShouldUseConfiguredReadTimeout() {
         fake.timeoutOnRead = true;
-        SerialIO serial = openedSerialWith(fake);
 
-        String output = serial.processSerialEvent(rxEvent(5));
+        String output = serial.processSerialEvent(new SerialPortEvent(fake, SerialPort.MASK_RXCHAR, 5));
 
         Assert.assertNull(output);
         Assert.assertEquals(fake.readCalls, 1);
@@ -108,10 +82,7 @@ public class SerialIOTests {
 
     @Test
     public void closePortFalseShouldCloseQzStatePredictably() throws Exception {
-        FakeSerialPortAdapter fake = new FakeSerialPortAdapter();
         fake.closeResult = false;
-        SerialIO serial = openedSerialWith(fake);
-
         serial.close();
 
         Assert.assertEquals(fake.closeCalls, 1);
@@ -122,10 +93,7 @@ public class SerialIOTests {
 
     @Test
     public void closePortExceptionShouldCloseQzStatePredictably() throws Exception {
-        FakeSerialPortAdapter fake = new FakeSerialPortAdapter();
         fake.throwOnClose = true;
-        SerialIO serial = openedSerialWith(fake);
-
         serial.close();
 
         Assert.assertEquals(fake.closeCalls, 1);
@@ -136,13 +104,12 @@ public class SerialIOTests {
 
     @Test
     public void pendingReadResultShouldBeIgnoredAfterCloseRequest() throws Exception {
-        FakeSerialPortAdapter fake = new FakeSerialPortAdapter();
         fake.readBytes = "late data".getBytes(StandardCharsets.UTF_8);
         fake.blockRead = true;
-        SerialIO serial = openedSerialWith(fake);
 
         final String[] output = new String[1];
-        Thread reader = new Thread(() -> output[0] = serial.processSerialEvent(rxEvent(fake.readBytes.length)));
+        final SerialPortEvent serialPortEvent = new SerialPortEvent(fake, SerialPort.MASK_RXCHAR, fake.readBytes.length);
+        Thread reader = new Thread(() -> output[0] = serial.processSerialEvent(serialPortEvent));
         reader.start();
 
         // Hold readBytes open so close can
@@ -160,9 +127,8 @@ public class SerialIOTests {
 
     @Test
     public void reopenAfterSuccessfulCloseShouldUseNewNativePort() throws Exception {
-        FakeSerialPortAdapter first = new FakeSerialPortAdapter();
-        FakeSerialPortAdapter second = new FakeSerialPortAdapter();
-        SerialIO serial = serialWith(first, second);
+        FakeSerialPort first = new FakeSerialPort(PORT_NAME);
+        FakeSerialPort second = new FakeSerialPort(PORT_NAME);
 
         Assert.assertTrue(serial.open(new SerialOptions()));
         serial.close();
@@ -176,21 +142,24 @@ public class SerialIOTests {
 
     @Test
     public void failedCloseShouldAllowClearReopenAttempt() throws Exception {
-        FakeSerialPortAdapter first = new FakeSerialPortAdapter();
-        FakeSerialPortAdapter second = new FakeSerialPortAdapter();
-        first.closeResult = false;
-        SerialIO serial = serialWith(first, second);
+        SerialIO serial1 = setUp();
+        FakeSerialPort fake1 = (FakeSerialPort)serial1.getPort();
 
-        Assert.assertTrue(serial.open(new SerialOptions()));
-        serial.close();
-        Assert.assertFalse(serial.isOpen());
+        fake1.closeResult = false;
+
+        Assert.assertTrue(serial1.open(new SerialOptions()));
+        serial1.close();
+        Assert.assertFalse(serial1.isOpen());
+
+        SerialIO serial2 = setUp();
+        FakeSerialPort fake2 = (FakeSerialPort)serial1.getPort();
 
         // QZ releases its stale adapter so a later
         // open gets a clean native attempt
-        Assert.assertTrue(serial.open(new SerialOptions()));
-        Assert.assertTrue(serial.isOpen());
-        Assert.assertEquals(first.closeCalls, 1);
-        Assert.assertEquals(second.openCalls, 1);
+        Assert.assertTrue(serial2.open(new SerialOptions()));
+        Assert.assertTrue(serial2.isOpen());
+        Assert.assertEquals(fake1.closeCalls, 1);
+        Assert.assertEquals(fake2.openCalls, 1);
     }
 
     // Lets expectSerialPortException accept
@@ -203,7 +172,7 @@ public class SerialIOTests {
     // this avoids adding a test dependency for one narrow seam
     // Model only the JSSC behavior SerialIO owns
     // and that keeps the testing hardware-free
-    private static class FakeSerialPortAdapter implements SerialPortAdapter {
+    private static class FakeSerialPort extends SerialPort {
         boolean opened;
         boolean closeResult = true;
         boolean throwOnClose;
@@ -218,6 +187,10 @@ public class SerialIOTests {
         CountDownLatch readStarted = new CountDownLatch(1);
         CountDownLatch releaseRead = new CountDownLatch(1);
 
+        public FakeSerialPort(String portName) {
+            super(portName);
+        }
+
         @Override
         public boolean openPort() {
             openCalls++;
@@ -229,7 +202,7 @@ public class SerialIOTests {
         public boolean closePort() throws SerialPortException {
             closeCalls++;
             if (throwOnClose) {
-                throw new SerialPortException(PORT_NAME, "closePort", "test close failure");
+                throw new SerialPortException(this, "closePort", "test close failure");
             }
             opened = false;
             return closeResult;
@@ -247,24 +220,27 @@ public class SerialIOTests {
         }
 
         @Override
-        public void setParams(int baudRate, int dataBits, int stopBits, int parity) {
+        public boolean setParams(int baudRate, int dataBits, int stopBits, int parity) {
             // Option application is not under test here
             // allow setup to continue
+            return true;
         }
 
         @Override
-        public void setFlowControlMode(int mask) {
+        public boolean setFlowControlMode(int mask) {
             // Flow control is outside the
             // lifecycle behavior these tests exercise
+            return true;
         }
 
         @Override
-        public void writeBytes(byte[] data) {
+        public boolean writeBytes(byte[] data) {
             writeCalls++;
+            return true;
         }
 
         @Override
-        public byte[] readBytes(int byteCount, int timeout) throws SerialPortException, SerialPortTimeoutException {
+        public byte[] readBytes(int byteCount, int timeout) throws SerialPortTimeoutException {
             readCalls++;
             lastReadTimeout = timeout;
             if (blockRead) {
@@ -276,7 +252,7 @@ public class SerialIOTests {
                 }
             }
             if (timeoutOnRead) {
-                throw new SerialPortTimeoutException(PORT_NAME, "readBytes", timeout);
+                throw new SerialPortTimeoutException(this, "readBytes", timeout);
             }
             return readBytes;
         }
